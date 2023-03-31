@@ -1,0 +1,657 @@
+# 1、进程和线程 
+**进程：**是程序的一次执行过程，是系统运行的基本单位，是操作系统资源分配的基本单位。
+**线程：**比进程更小的执行单位，是处理器任务调度和执行的基本单位，一个进程可以包含多个线程。多个线程可以共享进程的**堆**和**方法区**资源。
+## 1.1 从JVM角度理解进程与线程区别
+Java 虚拟机的运行时数据区包含**堆、方法区、虚拟机栈、本地方法栈、程序计数器**。各个进程之间是相互独立的，每个进程会包含多个线程，每个进程所包含的多个线程并不是相互独立的，这个线程会**共享**进程的堆和方法区，但这些线程**不会共享**虚拟机栈、本地方法栈、程序计数器。如下图所示，假设某个进程包含三个线程。  
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679966985373-41a0f2bf-5cdf-4f2d-87fe-a3e66e9ae188.png#averageHue=%23dbddaf&clientId=uc0059a00-a8b5-4&from=paste&height=550&id=ub7aa14f6&name=image.png&originHeight=605&originWidth=715&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=26609&status=done&style=none&taskId=u9a95fd8d-3a2b-4298-b2e1-cc55146e3ee&title=&width=649.9999859116298)
+
+- **内存分配：**进程之间地址空间和资源是相互独立的，同一个进程之间的线程会共享进程的地址空间和资源。
+- **资源开销：**每个进程具备各自的数据空间，进程之间的切换会有较大的开销。属于同一进程的线程会共享堆和方法区，同时具备私有的虚拟机栈、本地方法栈、程序计数器，线程之间切换资源开销较小，但不利于资源的管理和保护。
+## 1.2 虚拟机栈、本地方法栈和程序计数器为什么是私有的？
+
+- **虚拟机栈：** 每个 Java 方法在执行的同时会创建一个栈帧用于存储局部变量表、操作数栈、常量池引用等信息。从方法调用直至执行完成的过程，就对应着一个栈帧在 Java 虚拟机栈中入栈和出栈的过程。
+- **本地方法栈：** 和虚拟机栈所发挥的作用非常相似，区别是： **虚拟机栈为虚拟机执行 Java 方法 （也就是字节码）服务，而本地方法栈则为虚拟机使用到的 Native 方法服务。** 在 HotSpot 虚拟机中和 Java 虚拟机栈合二为一。
+
+所以，为了**保证线程中的局部变量不被别的线程访问到**，虚拟机栈和本地方法栈是线程私有的。
+
+---
+
+程序计数器主要有下面两个作用：
+
+1. 字节码解释器通过改变程序计数器来依次读取指令，从而实现代码的流程控制，如：顺序执行、选择、循环、异常处理。
+2. 在多线程的情况下，程序计数器用于记录当前线程执行的位置，从而当线程被切换回来的时候能够知道该线程上次运行到哪儿了。
+
+需要注意的是，如果执行的是 native 方法，那么程序计数器记录的是 undefined 地址，只有执行的是 Java 代码时程序计数器记录的才是下一条指令的地址。
+所以，程序计数器私有主要是为了**线程切换后能恢复到正确的执行位置**。
+## 1.3 什么是堆和方法区？
+堆和方法区是所有线程共享的资源，其中**堆**是进程中最大的一块内存，主要用于存放新创建的对象 (几乎所有对象都在这里分配内存)，**方法区**主要用于存放已被加载的类信息、常量、静态变量、即时编译器编译后的代码等数据。
+# 2、并发和并行
+
+- 并发：**一个处理器**处理**多个任务**，按时间片轮流处理多个任务。
+- 并行：单位时间**多个处理器**同时处理**多个任务**。
+
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679968427866-c1eab9a8-2a75-46a9-a788-7b65cbc93cb0.png#averageHue=%23f8f6f6&clientId=uc0059a00-a8b5-4&from=paste&height=469&id=ud7d030e9&name=image.png&originHeight=516&originWidth=563&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=52433&status=done&style=none&taskId=ub90a06d7-8446-49b7-8390-39887b65936&title=&width=511.8181707248217)
+# 3、多线程的优缺点
+
+- **优点**：当一个线程进入等待状态或者阻塞时，CPU 可以先去执行其他线程， 提高 CPU 的利用率。  
+- **缺点**：（1）**上下文切换**。频繁的上下文切换会影响多线程的执行速度。
+
+   （2）**死锁**。多线程并发执行可能会产生死锁。
+   （3）**受资源限制**。程序执行的速度受限于计算机的硬件或软件资源。
+# 4、什么是线程的上下文切换？
+即便是单核的处理器也会支持多线程，处理器会给每个线程分配 CPU 时间片来实现这个机制。
+时间片是 CPU 分配给每个线程的执行时间，一般来说时间片非常的短，所以处理器会不停地切换线程。  
+CPU 会通过时间片分配算法来循环执行任务，当前任务执行完一个时间片后会切换到下一个任务，但切换前会保存上一个任务的状态，因为下次切换回这个任务时还要加载这个任务的状态继续执行，**从任务保存到再加载的过程就是一次上下文切换**。  
+# 5、守护线程和用户线程区别
+
+- **用户线程：**平时用到的线程均为用户线程。
+- **守护线程：**用来服务用户线程的线程，例如垃圾回收线程。
+
+任何线程都可以设置为守护线程和用户线程，通过方法 `Thread.setDaemon(boolean on)`设置，true 则是将该线程设置为守护线程，false 则是将该线程设置为用户线程。同时，`Thread.setDaemon()`必须在 `Thread.start()`之前调用，否则运行时会抛出异常。 
+守护线程和用户线程的**主要区别**在于线程结束后 Java 虚拟机是否结束。
+用户线程：当任何一个用户线程未结束，Java 虚拟机是不会结束的。
+守护线程：如果只剩守护线程未结束，Java 虚拟机是会结束的。  
+# 6、死锁、活锁、饥饿
+**死锁**：由于两个或两个以上的线程相互竞争对方的资源，而同时不释放自己的资源，导致所有线程**同时**被阻塞。
+**活锁**：任务执行时没有被阻塞，由于某些条件没有被满足，导致线程一直重复尝试、失败、尝试、失败。例如，线程 1 和线程 2 都需要获取一个资源，但他们同时让其他线程先获取该资源，**两个线程一直谦让**，最后都无法获 取。  
+**饥饿**：以打印机打印文件为例，当有多个线程需要打印文件，系统按照短文件优先的策略进行打印，但当短文件的打印任务一直不间断地出现，那长文件的打印任务会被一直推迟，导致饥饿。  
+产生饥饿的原因：高优先级的线程占用了低优先级线程的CPU时间。
+## 6.1 死锁的四个必要条件
+
+1. 互斥条件：一个资源在同一时刻只由一个线程占用。
+2. 请求与保持条件：一个线程在请求被占资源时**发生阻塞**，并对已获得的资源**保持不放**。
+3. 循环等待条件：发生死锁时，所有的线程会形成死循环，一直阻塞。
+4. 不剥夺条件：线程已获得的资源在未使用完的情况下，不能被其他线程剥夺，只能由自己使用完释放资源。
+```java
+private static Object resource1 = new Object();
+private static Object resource2 = new Object();
+
+public static void main(String[] args) {
+    new Thread(() -> {
+        synchronized (resource1){
+            //返回当前正在执行的线程对象
+            System.out.println(Thread.currentThread() + "get resource1");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println(Thread.currentThread() + "wait get resource2");
+            synchronized (resource2){
+                System.out.println(Thread.currentThread() + "get resource2");
+            }
+        }
+    }, "线程 1").start();
+
+    new Thread(() -> {
+        synchronized (resource2){
+            //返回当前正在执行的线程对象
+            System.out.println(Thread.currentThread() + "get resource2");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println(Thread.currentThread() + "wait get resource1");
+            synchronized (resource1){
+                System.out.println(Thread.currentThread() + "get resource1");
+            }
+        }
+    }, "线程 2").start();
+}
+```
+运行结果：
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679971332893-1221d08f-561e-4b6c-98df-7878b3c46c92.png#averageHue=%23353331&clientId=uc0059a00-a8b5-4&from=paste&height=95&id=u53bd5f08&name=image.png&originHeight=104&originWidth=412&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=16484&status=done&style=none&taskId=uf35813cb-dd28-4c5e-86de-4887ad7da5f&title=&width=374.54544642740063)
+线程1通过`synchronized(resource1)`获得resource1的监视器锁，然后通过`Thread.sleep(1000)`，让线程1休眠1s，为的是让线程2行动，然后获取到resource2的监视器锁。线程1和线程2休眠结束后，都开始企图获取对方的资源，然后这两个线程都会陷入互相等待的状态，于是产生了死锁。
+## 6.2 如何预防和避免死锁?
+### 6.2.1 如何预防死锁？
+破坏死锁产生的必要条件即可：
+
+1. 破坏请求与保持条件：一次性申请所有资源。
+2. 破坏不剥夺条件：占用部分资源的线程进一步申请其他资源时，如果申请不到，可以主动释放它所占有的资源。
+3. 破坏循环等待条件：按照顺序申请资源。比如按某一顺序申请资源，释放资源时则反序释放。
+### 6.2.2 如何避免死锁？
+在资源分配时，借助算法（比如银行家算法）对资源分配进行计算评估，使其进入安全状态。
+将上面线程2的代码改成下面这样就不会产生死锁了
+```java
+new Thread(() -> {
+    synchronized (resource1){
+        //返回当前正在执行的线程对象
+        System.out.println(Thread.currentThread() + "get resource1");
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println(Thread.currentThread() + "wait get resource2");
+        synchronized (resource2){
+            System.out.println(Thread.currentThread() + "get resource2");
+        }
+    }
+}, "线程 2").start();
+```
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679972267521-94b147b9-4101-4a3c-929e-0a7d583890af.png#averageHue=%23353331&clientId=uc0059a00-a8b5-4&from=paste&height=145&id=uc7d89743&name=image.png&originHeight=159&originWidth=406&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=24449&status=done&style=none&taskId=u63ba5107-bbe9-42a8-9701-b13ca4fef02&title=&width=369.0909010910793)
+## 6.3 死锁、活锁、饥饿的区别
+
+1. 活锁是在不断尝试，而死锁是一直在等待。
+2. 活锁有可能自行解开，而死锁无法自行解开。
+3. 饥饿可以自行解开，而死锁不行
+# 7、线程的生命周期
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679985603801-0dd06916-a144-4e5e-bbde-d3b1620eb47f.png#averageHue=%23f9f9f9&clientId=uc0059a00-a8b5-4&from=paste&height=657&id=ufd339242&name=image.png&originHeight=723&originWidth=1080&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=97874&status=done&style=none&taskId=u84749ad8-b9ce-46dd-9636-fcee659ac15&title=&width=981.8181605378463)
+
+1. 线程创建后将处于**NEW初始**状态，调用`start()`方法后开始运行，此时线程处于**READY就绪**状态。
+2. 可运行状态的线程获取CPU时间片后就处于**RUNNING运行中**状态。
+3. 当线程执行`wait()`方法后，线程进入**WATING等待**状态，进入等待状态的线程需要依靠其他线程的通知才能返回到运行状态，而**TIMED_WATING超时等待**状态相当于在等待状态的基础上增加了超时限制，比如通过`sleep(long millis)`方法或者`wait(long millis)`方法可以将Java线程置于超时状态。
+4. 当超时时间到达后Java线程将会回到**RUNNABLE状态**。
+5. 当线程调用同步方法时，在没有获取到锁的情况下，线程会进入**BLOCKED阻塞状态，**一直到获取到锁。
+6. 线程在执行**RUNNABLE**的`run()`方法后会进入到**TERMINATED**终止状态。
+# 8、创建线程的方式？
+## 8.1 继承Thread类创建线程
+首先继承Thread类，重写`run()`方法，在`main()`函数中调用子类实例的`start()`方法。
+```java
+class ThreadDemo extends Thread{
+    @Override
+    public void run(){
+        System.out.println(Thread.currentThread().getName() + "run()方法正在执行");
+    }
+}
+
+public class Main{
+    public static void main(String[] args) {
+        ThreadDemo threadDemo = new ThreadDemo();
+        threadDemo.start();
+        System.out.println(Thread.currentThread().getName() + "main()方法执行结束");
+    }
+}
+```
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679986933617-7cfc130e-49f5-4e4c-a986-d0bf750507eb.png#averageHue=%23353433&clientId=uc0059a00-a8b5-4&from=paste&height=51&id=u04c31821&name=image.png&originHeight=56&originWidth=270&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=3487&status=done&style=none&taskId=ue7b4db76-234b-4da3-9100-6366566438e&title=&width=245.45454013446158)
+## 8.2 实现Runnable接口创建线程
+首先创建实现Runnable接口的类RunnableDemo，重写`run()`方法；
+创建类RunnableDemo的实例对象runnableDemo，以此为参数创建Thread对象，调用`start()`方法。
+```java
+class RunnableDemo implements Runnable{
+    @Override
+    public void run(){
+        System.out.println(Thread.currentThread().getName() + "run()方法正在执行");
+    }
+}
+
+public class Main{
+    public static void main(String[] args) {
+        RunnableDemo runnableDemo = new RunnableDemo();
+        Thread thread = new Thread(runnableDemo);
+        thread.start();
+        System.out.println(Thread.currentThread().getName() + "main()方法执行结束");
+    }
+}
+```
+## 8.3 使用Callable和Future创建线程
+
+1. 创建Callable接口的实现类CallableDemo，重写`call()`方法。
+2. 以类CallableDemo的实例化对象作为参数创建FutureTask对象。
+3. 以FutureTask对象作为参数创建Thread对象。
+4. 调用Thread对象的`start()`方法。
+```java
+class CallableDemo implements Callable<Integer>{
+    @Override
+    public Integer call() throws Exception {
+        System.out.println(Thread.currentThread().getName() + "call()方法执行中");
+        return null;
+    }
+}
+
+public class Main{
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        CallableDemo callableDemo = new CallableDemo();
+        FutureTask<Integer> integerFutureTask = new FutureTask<>(callableDemo);
+        Thread thread = new Thread(integerFutureTask);
+        thread.start();
+        System.out.println("返回结果" + integerFutureTask.get());
+        System.out.println(Thread.currentThread().getName() + "main()方法执行结束");
+    }
+}
+```
+## 8.4 使用线程池
+例如Executor框架，可以提供四种线程池：
+
+1. `newCachedThreadPool`创建一个**可缓存**的线程池，如果线程池长度超过处理需要，可灵活回收空闲线程，若无可回收，则新建线程。
+2. `newFixedThreadPool`创建一个**定长**的线程池，可控制线程最大并发数，超出的线程会在队列中等待。
+3. `newScheduledThreadPool`创建一个**定长**的线程池，**支持定时及周期性**任务执行。
+4. `newSingleThreadExecutor`创建一个**单线程化**的线程池，只会用**唯一**的工作线程来执行任务，保证所有任务按照指定顺序执行。
+```java
+class ThreadDemo extends Thread{
+    @Override
+    public void run(){
+        System.out.println(Thread.currentThread().getName() + " 正在执行");
+    }
+}
+
+public class Main{
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        //创建一个可重用固定长度的线程池
+        ExecutorService fixedThreadPool = Executors.newFixedThreadPool(2);
+
+        //实现接口
+        ThreadDemo t1 = new ThreadDemo();
+        ThreadDemo t2 = new ThreadDemo();
+        ThreadDemo t3 = new ThreadDemo();
+        ThreadDemo t4 = new ThreadDemo();
+        ThreadDemo t5 = new ThreadDemo();
+
+        //将线程放入池中执行
+        fixedThreadPool.execute(t1);
+        fixedThreadPool.execute(t2);
+        fixedThreadPool.execute(t3);
+        fixedThreadPool.execute(t4);
+        fixedThreadPool.execute(t5);
+
+        //关闭线程池
+        fixedThreadPool.shutdown();
+    }
+}
+```
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679990092390-4558bb87-ad46-44ef-86c3-9d35747cf21b.png#averageHue=%23363534&clientId=u1674a030-7c97-4&from=paste&height=120&id=u507f0a50&name=image.png&originHeight=132&originWidth=234&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=3835&status=done&style=none&taskId=u15d50a5e-266f-4674-9bbb-503640c0520&title=&width=212.72726811653337)
+# 9、runnable和callable区别
+**相同点：**两者都是接口；都需要调动`Thread.start()`启动线程。
+**不同点：**（1）callable的核心是`call()`方法，**允许返回值**；而runnable的核心是`run()`方法，**没有返回值**。
+（2）`call()`方法可以抛出异常，但是`run()`方法不行。
+（3）callable和runnable都可以应用于executors，但Thread类只支持runnable。
+# 10、start()和run()
+## 10.1 两者区别
+
+1. 线程是通过Thread对象所对应的方法`run()`来完成其操作的，而线程的启动是通过`start()`方法执行。
+2. `run()`方法可以重复调用，`start()`方法只调用一次。
+## 10.2 为什么调用start方法时会执行run方法，而不直接执行run方法？
+当 new 一个 Thread 时，线程进入了新建状态。
+调用 `start()`方法，会启动一个线程并使线程进入就绪状态，当分配到时间片后就可以开始运行了。`start()`会执行线程的相应准备工作，然后自动执行`run()`方法的内容，这是真正的多线程工作。 
+但是，直接执行 `run()` 方法，会把 `run()` 方法当成一 个 main 线程下的普通方法去执行，并不会在某个线程中执行它，所以这并不是多线程工作。 
+**总结**：调用 `start()`方法才可以**启动线程**并使线程进入**就绪状态**，直接执行`run()`方法的话**不会**以多线程的方式执行。  
+# 11、线程同步和调度的方法
+
+- `wait()`：使一个线程处于等待（阻塞）状态，并且释放所持有的对象的锁。
+- `sleep()`：使当前线程进入指定毫秒数的休眠，暂停执行，需要处理异常`InterruptedException`。
+- `notify()`：唤醒一个处于等待状态的线程，当然在调用此方法的时候，并**不能精准**的唤醒某一个等待的线程，而是JVM确定唤醒哪个线程，与优先级无关。
+- `notifyAll()`：唤醒所有处于等待状态的线程，该方法**并不是将对象的锁给所有线程**，而是让它们竞争，**只有获得锁的线程才能进入就绪状态**。
+- `join()`：与`sleep()`方法一样，是一个可中断的方法，在一个线程中调用另一个线程的`join()`方法，会使得当前的线程挂起，直到执行`join()`方法的线程结束。例如在B线程中调用A线程的`join()`方法，B线程进入了阻塞状态，直到A线程结束或者到达指定时间。
+- `yield()`：提醒调度器当前线程愿意放弃当前的CPU资源，使得当前线程从运行状态切换到就绪状态。
+# 12、sleep()和yield()区别
+
+- `sleep()`方法会使得当前线程暂停指定的时间，没有消耗CPU时间片。
+- `sleep()`使得线程进入阻塞状态，`yield()`方法只是对CPU进行提示，如果CPU没有忽略这个提示，会使得线程上下文的切换，进入到就绪状态。
+- `sleep()`需要抛出异常，而`yield()`不需要抛出异常。
+- `sleep()`会完成给定的休眠时间，`yield()`不一定。
+# 13、sleep()和wait()的区别
+**相同点：**（1）都能使线程进入到阻塞状态。
+（2）都是可中断方法，被中断后都会收到中断异常。
+**不同点：**（1）`wait()`是Object方法，`sleep()`是Thread方法。
+（2）`wait()`必须在同步方法中进行，`sleep()`不需要。
+（3）线程同步方法中执行`sleep()`不会释放monitor的锁，而`wait()`方法会释放monitor的锁。
+（4）`sleep()`方法在短暂的休眠后会主动退出阻塞，而`wait()`方法在没有指定时间的情况下，需要被其他线程中断才可以退出阻塞。
+# 14、线程间通信方式
+
+1. 共享变量：多个线程通过访问共享变量来实现通信。一般情况下需要使用 **synchronized** 或者 **volatile** 来保证共享变量的可见性和原子性。
+2. wait/notify：多个线程之间通过调用对象的 **wait()** 和 **notify()** 方法来实现通信。其中，**wait()** 方法会让当前线程进入等待状态，并且释放对象的锁；而 **notify()** 方法会唤醒等待队列中的某个线程，让其进入就绪状态。
+3. Condition：**Condition** 接口提供了类似 **wait/notify** 的功能，但是相比之下更加灵活。通过 **Condition** 接口的 **await()** 和 **signal()** 方法，可以实现多个线程之间的等待和唤醒操作。
+4. 管道流：通过管道流实现线程之间的通信。一般情况下，需要使用 **PipedInputStream** 和 **PipedOutputStream** 来实现管道流。
+# 15、如何实现线程同步和互斥？
+**线程互斥：**指某一个资源只能被一个访问者访问，具有唯一性和排他性。但访问者对资源访问的顺序是**乱序**的。
+**线程同步：**指在互斥的基础上使得访问者对资源进行**有序访问**。
+**线程同步的实现方法：**
+
+- 同步方法
+- 同步代码块
+- `wait()`和`notify()`
+- 使用volatile实现线程同步
+- 使用重入锁实现线程同步
+- 使用局部变量实现线程同步
+- 使用阻塞队列实现线程同步
+# 16、如何保证线程的运行安全？
+线程安全问题主要体现在：**原子性、可见性**和**有序性。**
+
+- **原子性**：一个或多个操作在CPU执行的过程中**不被中断**的特性。线程切换带来的原子性问题。
+- **可见性：**一个线程对共享变量的修改，另一个线程能够立刻看到。缓存导致的可见性问题。
+- **有序性：**程序执行的顺序按照代码的先后顺序执行。编译优化带来的有序性问题。
+
+**解决方法：**
+
+- 原子性问题：可用JDK Atomic开头的原子类、synchronized、LOCK解决；
+- 可见性问题：可用synchronized、volatile、LOCK解决；
+- 有序性问题：可用Happens-Before规则来解决。
+# 17、如何让三个线程T1、T2、T3按顺序执行这类问题？
+这是一道面试中常考的并发编程代码题，类似的题还有：
+
+- 三个线程T1、T2、T3轮流打印ABC，打印n次，如ABCABCABC......
+- 两个线程交替打印1-100的奇偶数
+- N个线程循环打印1-100
+- ......
+
+其实这类问题的本质都是**线程通信**问题，思路基本上都是**一个线程执行完，阻塞该线程，唤醒其他线程**，然后按顺序执行下一个线程。
+## 17.1 如何按顺序执行三个线程？
+### 17.1.1 synchronized + wait/notify
+```java
+private int num;
+private static final Object LOCK = new Object();
+
+private void printABC(String name, int targetNum){
+    synchronized (LOCK){
+        //让其他线程陷入阻塞状态
+        while (num % 3 != targetNum){
+            try {
+                LOCK.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        num++;
+        System.out.print(name);
+        //唤醒所有线程
+        LOCK.notifyAll();
+    }
+}
+
+public static void main(String[] args) {
+    Main main = new Main();
+    new Thread(() -> {
+        main.printABC("A",0);
+    }, "A").start();
+    new Thread(() -> {
+        main.printABC("B",1);
+    }, "B").start();
+    new Thread(() -> {
+        main.printABC("C",2);
+    }, "C").start();
+}
+```
+## 17.2 三个线程轮流打印n次ABC
+这个只需要在上面代码的基础上，加一个n次的循环即可
+```java
+private void printABC(String name, int targetNum){
+    //加个循环
+    for (int i = 0; i < 10; i++) {
+        synchronized (LOCK){
+            while (num % 3 != targetNum){
+                try {
+                    LOCK.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            num++;
+            System.out.print(name);
+            LOCK.notifyAll();
+        }
+    }
+}
+```
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1680060401101-d4bbca67-b73f-4326-a23a-01b91ac1998a.png#averageHue=%23363331&clientId=uec025b8d-32e4-4&from=paste&height=33&id=u6675e165&name=image.png&originHeight=36&originWidth=319&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=1409&status=done&style=none&taskId=u668bd7a7-1041-46c2-a7a8-f46484df077&title=&width=289.9999937144194)
+基本思路：A B C三个线程同时启动，因为变量`num`的初始值为0，所以线程B、C拿到锁后，进入`while()`循环，然后执行`wait()`方法，线程阻塞，释放锁。只有A拿到锁后，不仅如此`while()`循环，执行`num++`，打印字符A，最后唤醒其他两个线程。这个时候变量`num`为1，所以线程B拿到锁后，不被阻塞，执行`num++`，打印字符B，最后唤醒其他两个线程。后面打印字符C也是相同的流程。
+### 17.2.1 join()方法
+`join()`方法：在A线程中调用了B线程的`join()`方法时，表示只有当B线程执行完毕时，A线程才能继续执行。
+基于这个原理，我们可以使得三个线程按照顺序执行，然后循环多次即可。无论三个线程谁先谁后，顺序最后都是A-B-C。
+```java
+static class printABC implements Runnable{
+    private Thread beforeThread;
+    public printABC(Thread beforeThread){
+        this.beforeThread = beforeThread;
+    }
+
+    @Override
+    public void run() {
+        if (beforeThread != null){
+            try {
+                beforeThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.print(Thread.currentThread().getName());
+    }
+}
+
+public static void main(String[] args) throws InterruptedException {
+    for (int i = 0; i < 10; i++) {
+        Thread t1 = new Thread(new printABC(null), "A");
+        Thread t2 = new Thread(new printABC(t1), "B");
+        Thread t3 = new Thread(new printABC(t2), "C");
+        t1.start();
+        t2.start();
+        t3.start();
+        Thread.sleep(10);
+    }
+}
+```
+使用`join`好处就是不论三个线程启动的顺序咋样，线程B只会在A线程执行完后，才会执行，C只会在B执行完后执行。
+### 17.2.2 Lock锁
+其实原理一样，使用lock锁
+```java
+private int num;    //当前状态值：保证三个线程之间交替打印
+private Lock lock = new ReentrantLock();
+
+private void printABC(String name, int targetNum){
+    for (int i = 0; i < 10;) {
+        lock.lock();
+        if (num % 3 == targetNum){
+            num++;
+            i++;
+            System.out.print(name);
+        }
+        lock.unlock();
+    }
+}
+
+public static void main(String[] args) {
+    Main main = new Main();
+    new Thread(() -> {
+        main.printABC("A",0);
+    }, "A").start();
+    new Thread(() -> {
+        main.printABC("B",1);
+    }, "B").start();
+    new Thread(() -> {
+        main.printABC("C",2);
+    }, "C").start();
+}
+```
+### 17.2.3 Lock+Condition精准唤醒
+```java
+private int num;    //当前状态值：保证三个线程之间交替打印
+private static Lock lock = new ReentrantLock();
+private static Condition c1 = lock.newCondition();
+private static Condition c2 = lock.newCondition();
+private static Condition c3 = lock.newCondition();
+
+private void printABC(String name, int targetNum, Condition currentThread, Condition nextThread){
+    for (int i = 0; i < 10;) {
+        lock.lock();
+        try {
+            while (num % 3 != targetNum) {
+                currentThread.await();
+            }
+            num++;
+            i++;
+            System.out.print(name);
+            nextThread.signal();
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            lock.unlock();
+        }
+    }
+}
+
+public static void main(String[] args) {
+    Main main = new Main();
+    new Thread(() -> {
+        main.printABC("A",0, c1, c2);
+    }, "A").start();
+    new Thread(() -> {
+        main.printABC("B",1, c2, c3);
+    }, "B").start();
+    new Thread(() -> {
+        main.printABC("C",2, c3, c1);
+    }, "C").start();
+}
+```
+## 17.3 两个线程交替打印1-100的奇偶数
+基本思路：也是用synchronized+wait方法进行打印
+当数字是奇数时，打印数字，然后唤醒另一个线程打印偶数。
+```java
+private int num = 1;                                //全局计数器，从1开始
+private final Object Lock = new Object();           //用于线程同步的锁
+
+public void print(int targetNum){
+    synchronized (Lock){
+        while (num <= 100){
+            if ((num % 2) == targetNum){    		//如果是要求的数，就打印
+                System.out.print(num + " ");
+                num++;
+                Lock.notifyAll();                   //打印完然后唤醒另一个线程
+            }else{                                  //否则就释放锁，并等待
+                try {
+                    Lock.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+}
+
+public static void main(String[] args) {
+    Main main = new Main();
+    new Thread(() -> {
+        main.print(0);
+    }).start();
+    new Thread(() -> {
+        main.print(1);
+    }).start();
+}
+```
+## 17.4 N个线程循环打印1-100
+当N为4时，循环打印1-100，解决方法一样的
+```java
+private int num = 1;                                //全局计数器，从1开始
+private final Object Lock = new Object();           //用于线程同步的锁
+
+public void print(int targetNum){
+    synchronized (Lock){
+        while (num <= 100){
+            if ((num % 4) == targetNum){    //如果是要求的数，就打印
+                System.out.print(num + " ");
+                num++;
+                Lock.notifyAll();                   //打印完然后唤醒另一个线程
+            }else{                                  //否则就释放锁，并等待
+                try {
+                    Lock.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+}
+
+public static void main(String[] args) {
+    Main main = new Main();
+    new Thread(() -> {
+        main.print(0);
+    }).start();
+    new Thread(() -> {
+        main.print(1);
+    }).start();
+    new Thread(() -> {
+        main.print(2);
+    }).start();
+    new Thread(() -> {
+        main.print(3);
+    }).start();
+}
+```
+# 18、synchronized关键字
+## 18.1 什么是synchronized关键字
+多个线程同时访问共享资源时会出现一些问题，而`synchronized`关键字是用来**保证线程同步**的。
+## 18.2 Java内存的可见性问题
+在了解 `synchronized` 关键字的底层原理前，需要先简单了解下** Java 的内存模型**，看看 `synchronized` 关键字是如何起作用的。  
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1680077763217-dbbeb71d-40bf-4268-8a6b-c6e5765b8293.png#averageHue=%23f8f4de&clientId=uf5b0fdc5-9993-4&from=paste&height=372&id=u63610ccb&name=image.png&originHeight=409&originWidth=503&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=10047&status=done&style=none&taskId=udc38d03a-804d-4211-90df-81783313908&title=&width=457.27271736160804)
+**Q：什么是内存不可见问题？**
+**A：**Java中内存不可见问题是指当多个线程访问同一共享变量时，一个线程修改了这个变量的值，其他线程可能无法立即看到修改后的值，从而出现数据不一致的问题。这是因为每个线程都有自己的工作内存，线程间共享变量时，为了提高性能，JVM会把变量缓存到每个线程的本地工作内存中，而不是直接读取主内存中的值。当一个线程修改了共享变量的值时，修改后的值可能还没有同步到主内存中，其他线程读取的仍是旧值，从而导致数据不一致。
+
+---
+
+该问题在Java中是通过`synchronized`关键字和`volatile`关键字解决的。
+其实 `synchronized` 就是把在 `synchronized` 块内使用到的变量从线程的本地内存中擦除，这样在 `synchronized` 块中再次使用到该变量就不能从本地内存中获取了，需要从主内存中获取，**确保变量的修改和读取都在主内存中进行**，避免了了内存不可见问题。  
+## 18.3 synchronized关键字三大特性？
+
+- **原子性：**一个或多个操作要么全部执行成功，要么全部执行失败。`synchronized`关键字可以保证只有一个线程拿到锁，访问共享资源。
+- **可见性：**当一个线程对共享变量进行修改之后，其他线程就可以立刻看到。执行`synchronized`时，会对应执行`lock`、`unlock`原子操作，保证可见性。
+- **有序性：**程序的执行顺序会按照代码的先后顺序执行。
+## 18.4 synchronized关键字可以实现什么类型的锁？
+
+- **悲观锁：**每次访问共享资源时都会上锁。
+- **非公平锁：**线程获取锁的顺序并不一定是按照线程阻塞的顺序。
+- **可重入锁：**已经获取锁的线程可以再次获取锁。
+- **独占锁/排他锁：**该锁只能被一个线程所持有，其他线程均被阻塞。
+## 18.5 使用方式
+
+1. 修饰普通同步方法
+2. 修饰静态同步方法
+3. 修饰同步方法块
+### 18.5.1 修饰普通同步方法
+```java
+synchronized void method(){
+    //业务代码
+}
+```
+**给当前对象实例加锁**，进入同步代码前要获得**当前对象实例的锁**。
+### 18.5.2 修饰静态同步方法
+```java
+synchronized static void method(){
+    //业务代码
+}
+```
+修饰静态同步方法也就是**给当前类加锁**，会作用于类的所有对象实例 ，进入同步代码前要获得**当前 class 的锁**。因为静态成员不属于任何一个实例对象，是类成员(static 表明这是该类的一个静态资源，不管 new 了多少个对象， 只有一份)。
+所以，如果一个线程 A 调用一个实例对象的非静态 synchronized 方法，而线程 B 需要调用这个实例对象所属类的静态 synchronized 方法是允许的，不会发生互斥现象.
+因为**访问静态** synchronized 方法**占用的锁是当前类的锁**，而**访问非静态** synchronized 方法**占用的锁是当前实例对象锁**。  
+### 18.5.3 修饰同步方法块
+```java
+synchronized(this){
+    //业务代码
+}
+```
+修饰同步方法块，表示**对给定对象/类加锁**。
+`synchronized(this|object)` 表示进入同步代码库前**要获得给定对象的锁**。
+`synchronized(类.class)`表示进入同步代码前**要获得当前 class 的锁**。  
+## 18.6 实现单例模式
+```java
+public class Singleton {
+    private volatile static Singleton uniqueInstance;
+    //用private修饰构造函数可以避免被实例化
+    private Singleton(){}
+    
+    public static Singleton getUniqueInstance(){
+        //先判断对象是否已经实例化过
+        //没有实例化过才进入加锁代码
+        if (uniqueInstance == null){
+            //类对象加锁
+            synchronized (Singleton.class){
+                if (uniqueInstance == null){
+                    uniqueInstance = new Singleton();
+                }
+            }
+        }
+        return uniqueInstance;
+    }
+}
+```
+`uniqueInstance = new Singleton();`这段代码其实是分三步执行的：
+
+1. 为`uniqueInstance`分配内存空间；
+2. 初始化`uniqueInstance`;
+3. 将`uniqueInstance`指向分配的内存空间。
+
+但是因为JVM具有指令重排的特性，执行的顺序可能会变成1->3->2。在单线程中指令重排不会出问题，但是在多线程的情况下，会导致一个线程获得还没有初始化的实例。比如，线程T1执行了1和3，此时T2调用`getUniqueInstance()`后发现`uniqueInstance`不为空，因此返回`uniqueInstance`，但是此时还进行第2步，也即还未初始化`uniqueInstance`。
+使用`volatile`关键字可以禁止JVM指令重排，从而保证多线程环境下也能正常运行。
+## 18.7 底层原理
+在 jdk1.6 之前，synchronized 被称为重量锁，在 jdk1.6 中，为了减少**获得锁**和**释放锁**带来的性能开销，引入了**偏向锁**和**轻量级锁**。
+
+
