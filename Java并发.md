@@ -890,7 +890,7 @@ ThreadLocal 的操作都是基于 ThreadLocalMap 展开的，而 ThreadLocalMap 
 - **提高响应速度**。当任务到达时，任务可以不需要等到线程创建就能立即执行。
 - **提高线程的可管理性**。线程是稀缺资源，如果无限制的创建，不仅会消耗系统资源，还会降低系统的稳定性，使用线程池可以进行统一的分配，调优和监控。
 
-## 23.2 如何创建线程？
+## 23.2 如何创建线程池？
 
 **方式一：通过`ThreadPoolExecutor`构造函数来创建（推荐）。**
 
@@ -901,8 +901,452 @@ ThreadLocal 的操作都是基于 ThreadLocalMap 展开的，而 ThreadLocalMap 
 3. `newScheduledThreadPool`创建一个**定长**的线程池，**支持定时及周期性**任务执行。
 4. `newSingleThreadExecutor`创建一个**单线程化**的线程池，只会用**唯一**的工作线程来执行任务，保证所有任务按照指定顺序执行。
 
-**为什么不推荐使用Executors方式创建线程池？**
+### 23.2.1  为什么不推荐使用Executors方式创建线程池？
 
 - **`FixedThreadPool` 和 `SingleThreadExecutor`** ： 使用的是无界的 `LinkedBlockingQueue`，任务队列最大长度为 `Integer.MAX_VALUE`,可能堆积大量的请求，从而导致 OOM。
 - **`CachedThreadPool`** ：使用的是同步队列 `SynchronousQueue`, 允许创建的线程数量为 `Integer.MAX_VALUE` ，可能会创建大量线程，从而导致 OOM。
 - **`ScheduledThreadPool` 和 `SingleThreadScheduledExecutor`** : 使用的无界的延迟阻塞队列`DelayedWorkQueue`，任务队列最大长度为 `Integer.MAX_VALUE`,可能堆积大量的请求，从而导致 OOM。
+
+### 23.2.2 线程池常见参数有哪些？如何解释？
+
+**`ThreadPoolExecutor` 3 个最重要的参数：**
+
+- **`corePoolSize` :** 任务队列未达到队列容量时，最大可以同时运行的线程数量。
+- **`maximumPoolSize` :** 任务队列中存放的任务达到队列容量的时候，当前可以同时运行的线程数量变为最大线程数。
+- **`workQueue`:** 新任务来的时候会先判断当前运行的线程数量是否达到核心线程数，如果达到的话，新任务就会被存放在队列中。
+
+![image-20230410153830053](pictures\image-20230410153830053.png)
+
+`ThreadPoolExecutor`其他常见参数 :
+
+- **`keepAliveTime`**:线程池中的线程数量大于 `corePoolSize` 的时候，如果这时没有新的任务提交，核心线程外的线程不会立即销毁，而是会等待，直到等待的时间超过了 `keepAliveTime`才会被回收销毁；
+- **`unit`** : `keepAliveTime` 参数的时间单位。
+- **`threadFactory`** :executor 创建新线程的时候会用到。
+- **`handler`** :饱和策略。关于饱和策略下面单独介绍一下。
+
+### 23.2.3 线程池的饱和策略有哪些？
+
+- **`ThreadPoolExecutor.AbortPolicy`：** 抛出 `RejectedExecutionException`来拒绝新任务的处理。
+- **`ThreadPoolExecutor.CallerRunsPolicy`：** 调用执行自己的线程运行任务，也就是直接在调用`execute`方法的线程中运行(`run`)被拒绝的任务，如果执行程序已关闭，则会丢弃该任务。因此这种策略会降低对于新任务提交速度，影响程序的整体性能。如果您的应用程序可以承受此延迟并且你要求任何一个任务请求都要被执行的话，你可以选择这个策略。
+- **`ThreadPoolExecutor.DiscardPolicy`：** 不处理新任务，直接丢弃掉。
+- **`ThreadPoolExecutor.DiscardOldestPolicy`：** 此策略将丢弃最早的未处理的任务请求。
+
+### 23.2.4 线程池常用的阻塞队列有哪些？
+
+新任务来的时候会先判断当前运行的线程数量是否达到核心线程数，如果达到的话，新任务就会被存放在队列中。
+
+不同的线程池会选用不同的阻塞队列，我们可以结合内置线程池来分析。
+
+- 容量为 `Integer.MAX_VALUE` 的 `LinkedBlockingQueue`（无界队列）：`FixedThreadPool` 和 `SingleThreadExector` 。由于队列永远不会被放满，因此`FixedThreadPool`最多只能创建核心线程数的线程。
+- `SynchronousQueue`（同步队列） ：`CachedThreadPool` 。`SynchronousQueue` 没有容量，不存储元素，目的是保证对于提交的任务，如果有空闲线程，则使用空闲线程来处理；否则新建一个线程来处理任务。也就是说，`CachedThreadPool` 的最大线程数是 `Integer.MAX_VALUE` ，可以理解为线程数是可以无限扩展的，可能会创建大量线程，从而导致 OOM。
+- `DelayedWorkQueue`（延迟阻塞队列）：`ScheduledThreadPool` 和 `SingleThreadScheduledExecutor` 。`DelayedWorkQueue` 的内部元素并不是按照放入的时间排序，而是会按照延迟的时间长短对任务进行排序，内部采用的是“堆”的数据结构，可以保证每次出队的任务都是当前队列中执行时间最靠前的。`DelayedWorkQueue` 添加元素满了之后会自动扩容原来容量的 1/2，即永远不会阻塞，最大扩容可达 `Integer.MAX_VALUE`，所以最多只能创建核心线程数的线程。
+
+### 23.2.5 线程池处理任务的流程
+
+![image-20230410154615916](pictures\image-20230410154615916.png)
+
+1. 如果当前运行的线程数小于核心线程数，那么就会新建一个线程来执行任务。
+2. 如果当前运行的线程数等于或大于核心线程数，但是小于最大线程数，那么就把该任务放入到任务队列里等待执行。
+3. 如果向任务队列投放任务失败（任务队列已经满了），但是当前运行的线程数是小于最大线程数的，就新建一个线程来执行任务。
+4. 如果当前运行的线程数已经等同于最大线程数了，新建线程将会使当前运行的线程超出最大线程数，那么当前任务会被拒绝，饱和策略会调用`RejectedExecutionHandler.rejectedExecution()`方法。
+
+### 23.3.6 如何给线程命名？
+
+初始化线程池的时候需要显示命名（设置线程池名称前缀），有利于定位问题。
+
+默认情况下创建的线程名字类似 `pool-1-thread-n` 这样的，没有业务含义，不利于我们定位问题。
+
+给线程池里的线程命名通常有下面两种方式：
+
+1、利用 guava 的 `ThreadFactoryBuilder`
+
+```java
+ThreadFactory threadFactory = new ThreadFactoryBuilder()
+                        .setNameFormat(threadNamePrefix + "-%d")
+                        .setDaemon(true).build();
+ExecutorService threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, keepAliveTime, TimeUnit.MINUTES, workQueue, threadFactory)
+```
+
+2、自己实现`ThreadFactory`
+
+```java
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+/**
+ * 线程工厂，它设置线程名称，有利于我们定位问题。
+ */
+public final class NamingThreadFactory implements ThreadFactory {
+
+    private final AtomicInteger threadNum = new AtomicInteger();
+    private final ThreadFactory delegate;
+    private final String name;
+
+    /**
+     * 创建一个带名字的线程池生产工厂
+     */
+    public NamingThreadFactory(ThreadFactory delegate, String name) {
+        this.delegate = delegate;
+        this.name = name; // TODO consider uniquifying this
+    }
+
+    @Override
+    public Thread newThread(Runnable r) {
+        Thread t = delegate.newThread(r);
+        t.setName(name + " [#" + threadNum.incrementAndGet() + "]");
+        return t;
+    }
+
+}
+```
+
+### 23.3.7 如何合理配置线程池大小？
+
+- 如果业务是 CPU 密集型的： 该业务需要大量的运算，而没有阻塞，CPU 一直全速运行。因此，应当配置 尽可能少的线程数量。一般公式：**CPU 核数+1** 个线程的线程池。 
+
+- 如果业务是 IO 密集型的 
+
+  ​	（1）如 IO 密集型的业务并不是一直在执行任务，则应该配置尽可能多的 线程。一般公式：**CPU 核数*2**。 
+
+  ​	（2）IO 密集型，即该任务需要大量的 IO、会有大量的阻塞，比如高并发读取 Redis 或者 MySQL。参考公式：**CPU 核数/（1-阻塞系数）**。阻塞系数在 0.8-0.9 之间。 比如 8 核 CPU： 8 / (1-0.9) = 80 个线程数。
+
+## 23.3 线程池原理分析
+
+首先创建一个 `Runnable` 接口的实现类
+
+```java
+public class MyRunnable implements Runnable{
+
+    private String command;
+
+    public MyRunnable(String s){
+        this.command = s;
+    }
+
+    @Override
+    public void run() {
+        System.out.println(Thread.currentThread().getName() + "Start. Time = " + new Date());
+        processCommand();
+        System.out.println(Thread.currentThread().getName() + "End. Time = " + new Date());
+    }
+
+    private void processCommand() {
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public String toString(){
+        return this.command;
+    }
+}
+```
+
+编写测试程序，使用`ThreadPoolExecutor`构造函数自定义参数的方式来创建线程。
+
+```java
+public class ThreadPoolExecutorDemo {
+
+    private static final int CORE_POOL_SIZE = 5;
+    private static final int MAX_POOL_SIZE = 10;
+    private static final int QUEUE_CAPACITY = 100;
+    private static final long KEEP_ALIVE_TIME = 1L;
+
+    public static void main(String[] args) {
+        //使用阿里巴巴推荐的创建线程池的方式
+        //通过ThreadPoolExecutor构造函数自定义参数创建
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(
+                CORE_POOL_SIZE,
+                MAX_POOL_SIZE,
+                KEEP_ALIVE_TIME,
+                TimeUnit.SECONDS,
+                new ArrayBlockingQueue<>(QUEUE_CAPACITY),
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+
+        for (int i = 0; i < 10; i++) {
+            //创建workerThread对象
+            MyRunnable worker = new MyRunnable("" + i);
+            //执行Runnable
+            executor.execute(worker);
+        }
+        //终止线程池
+        executor.shutdown();
+        while (!executor.isTerminated()){
+
+        }
+        System.out.println("Finished all thread");
+    }
+}
+```
+
+可以看到上面的代码中，指定了：
+
+- `corePoolSize`: 核心线程数为 5。
+
+- `maximumPoolSize` ：最大线程数 10
+
+- `keepAliveTime` : 等待时间为 1L。
+
+- `unit`: 等待时间的单位为 TimeUnit.SECONDS。
+
+- `workQueue`：任务队列为 `ArrayBlockingQueue`，并且容量为 100;
+
+- `handler`:饱和策略为 `CallerRunsPolicy`。
+
+输出结果：
+
+```markdown
+pool-1-thread-1Start. Time = Mon Apr 10 16:04:32 CST 2023
+pool-1-thread-2Start. Time = Mon Apr 10 16:04:32 CST 2023
+pool-1-thread-4Start. Time = Mon Apr 10 16:04:32 CST 2023
+pool-1-thread-5Start. Time = Mon Apr 10 16:04:32 CST 2023
+pool-1-thread-3Start. Time = Mon Apr 10 16:04:32 CST 2023
+pool-1-thread-5End. Time = Mon Apr 10 16:04:37 CST 2023
+pool-1-thread-2End. Time = Mon Apr 10 16:04:37 CST 2023
+pool-1-thread-1End. Time = Mon Apr 10 16:04:37 CST 2023
+pool-1-thread-2Start. Time = Mon Apr 10 16:04:37 CST 2023
+pool-1-thread-1Start. Time = Mon Apr 10 16:04:37 CST 2023
+pool-1-thread-4End. Time = Mon Apr 10 16:04:37 CST 2023
+pool-1-thread-4Start. Time = Mon Apr 10 16:04:37 CST 2023
+pool-1-thread-5Start. Time = Mon Apr 10 16:04:37 CST 2023
+pool-1-thread-3End. Time = Mon Apr 10 16:04:37 CST 2023
+pool-1-thread-3Start. Time = Mon Apr 10 16:04:37 CST 2023
+pool-1-thread-5End. Time = Mon Apr 10 16:04:42 CST 2023
+pool-1-thread-1End. Time = Mon Apr 10 16:04:42 CST 2023
+pool-1-thread-2End. Time = Mon Apr 10 16:04:42 CST 2023
+pool-1-thread-3End. Time = Mon Apr 10 16:04:42 CST 2023
+pool-1-thread-4End. Time = Mon Apr 10 16:04:42 CST 2023
+Finished all thread
+```
+
+线程池首先会执行5个任务，然后这些任务中，如果有被执行完的任务，就会被拿去新的任务执行。
+
+首先分析一下 `execute`方法。 在示例代码中，我们使用 `executor.execute(worker)`来提交一个任务到线程池中去。
+
+这个方法非常重要，下面我们来看看它的源码：
+
+```java
+// 存放线程池的运行状态 (runState) 和线程池内有效线程的数量 (workerCount)
+private final AtomicInteger ctl = new AtomicInteger(ctlOf(RUNNING, 0));
+
+private static int workerCountOf(int c) {
+    return c & CAPACITY;
+}
+//任务队列
+private final BlockingQueue<Runnable> workQueue;
+
+public void execute(Runnable command) {
+    // 如果任务为null，则抛出异常。
+    if (command == null)
+        throw new NullPointerException();
+    // ctl 中保存的线程池当前的一些状态信息
+    int c = ctl.get();
+
+    //  下面会涉及到 3 步 操作
+    // 1.首先判断当前线程池中执行的任务数量是否小于 corePoolSize
+    // 如果小于的话，通过addWorker(command, true)新建一个线程，并将任务(command)添加到该线程中；然后，启动该线程从而执行任务。
+    if (workerCountOf(c) < corePoolSize) {
+        if (addWorker(command, true))
+            return;
+        c = ctl.get();
+    }
+    // 2.如果当前执行的任务数量大于等于 corePoolSize 的时候就会走到这里，表明创建新的线程失败。
+    // 通过 isRunning 方法判断线程池状态，线程池处于 RUNNING 状态并且队列可以加入任务，该任务才会被加入进去
+    if (isRunning(c) && workQueue.offer(command)) {
+        int recheck = ctl.get();
+        // 再次获取线程池状态，如果线程池状态不是 RUNNING 状态就需要从任务队列中移除任务，并尝试判断线程是否全部执行完毕。同时执行拒绝策略。
+        if (!isRunning(recheck) && remove(command))
+            reject(command);
+        // 如果当前工作线程数量为0，新创建一个线程并执行。
+        else if (workerCountOf(recheck) == 0)
+            addWorker(null, false);
+    }
+    //3. 通过addWorker(command, false)新建一个线程，并将任务(command)添加到该线程中；然后，启动该线程从而执行任务。
+    // 传入 false 代表增加线程时判断当前线程数是否少于 maxPoolSize
+    //如果addWorker(command, false)执行失败，则通过reject()执行相应的拒绝策略的内容。
+    else if (!addWorker(command, false))
+        reject(command);
+}
+```
+
+在 `execute` 方法中，多次调用 `addWorker` 方法。`addWorker` 这个方法主要用来创建新的工作线程，如果返回 true 说明创建和启动工作线程成功，否则的话返回的就是 false。
+
+## 23.4 几个常见的对比
+
+### 23.4.1 Runnable和Callable
+
+`Runnable`自 Java 1.0 以来一直存在，但`Callable`仅在 Java 1.5 中引入,**目的就是为了来处理`Runnable`不支持的用例**。
+
+**`Runnable` 接口**不会返回结果或抛出检查异常，但是 **`Callable` 接口**可以。所以，如果任务不需要返回结果或抛出异常推荐使用 **`Runnable` 接口**，这样代码看起来会更加简洁。
+
+工具类 `Executors` 可以实现将 `Runnable` 对象转换成 `Callable` 对象。（`Executors.callable(Runnable task)` 或 `Executors.callable(Runnable task, Object result)`）。
+
+### 23.4.2 excute()和submit()
+
+`execute()`方法用于提交**不需要返回值的任务**，所以无法判断任务是否被线程池执行成功与否；
+
+`submit()`方法用于提交**需要返回值的任务**。线程池会返回一个 `Future` 类型的对象，通过这个 `Future` 对象可以判断任务是否执行成功，并且可以通过 `Future` 的 `get()`方法来获取返回值，`get()`方法会阻塞当前线程直到任务完成，而使用 `get（long timeout，TimeUnit unit）`方法的话，如果在 `timeout` 时间内任务还没有执行完，就会抛出 `java.util.concurrent.TimeoutException`。
+
+### 23.4.3 shutdown()和shutdownNow()
+
+`shutdown()` :关闭线程池，线程池的状态变为 `SHUTDOWN`。线程池不再接受新任务了，但是**队列里的任务得执行完毕**。
+
+`shutdownNow()` :关闭线程池，线程的状态变为 `STOP`。线程池会终止当前正在运行的任务，并**停止处理排队的任务**并返回正在等待执行的 List
+
+### 23.4.4 isTerminated()和isShutdown()
+
+- `isTerminated` 当调用 `shutdown()` 方法后，并且所有提交的任务完成后返回为 true
+- `isShutDown` 当调用 `shutdown()` 方法后返回为 true。
+
+# 24、CAS
+
+CAS(Compare And Swap)是CPU指令级的原子操作，并且处于用户态下，所以其开销较小，性能更高。
+
+是一种乐观锁技术，属于非阻塞算法。
+
+## 24.1 CAS的自旋过程？
+
+CAS 是一种无锁算法，该算法关键依赖两个值——**期望值**（旧值）和**新值**，底层 CPU 利用原子操作判断内存原值与期望值是否相等，如果相等就给内存地址赋新值，否则不做任何操作。使用 CAS 进行无锁编程的步骤大致如下：
+
+1. 获得字段的期望值oldValue
+2. 计算出需要替换的新值newValue
+3. 通过CAS将新值newValue放在字段的内存地址上，如果CAS失败，就重复第1步和第2步，一直到CAS成功，这就是CAS自旋。
+
+## 24.2 CAS存在的问题
+
+- ABA问题，在乐观锁中有介绍。
+- 高并发下，循环时间过长导致时间开销太大，性能很低。
+- 只能保证一个共享变量的原子操作。
+
+# 25、Atomic原子类
+
+Atomic 是指一个操作是不可中断的。即使是在多个线程一起执行的时候，一个操作一旦开始，就不会被其他线程干扰。
+
+所谓原子类说简单点就是具有原子/原子操作特征的类。
+
+并发包 `java.util.concurrent` 的原子类都存放在`java.util.concurrent.atomic`下
+
+根据操作的数据类型，可以将 JUC 包中的原子类分为 4 类
+
+## 25.1 基本类型
+
+- `AtomicInteger`：整型原子类
+- `AtomicLong`：长整型原子类
+- `AtomicBoolean` ：布尔型原子类
+
+主要利用 CAS (compare and swap) + volatile 和 native 方法来保证原子操作，从而避免 synchronized 的高开销，执行效率大为提升。
+
+## 25.2 数组类型
+
+- `AtomicIntegerArray`：整形数组原子类
+- `AtomicLongArray`：长整形数组原子类
+- `AtomicReferenceArray` ：引用类型数组原子类
+
+## 25.3 引用类型
+
+- `AtomicReference`：引用类型原子类
+
+- `AtomicStampedReference`：原子更新带有版本号的引用类型。该类将整数值与引用关联起来，**可用于解决原子的更新数据和数据的版本号**，可以解决使用 CAS 进行原子更新时可能出现的 ABA 问题。
+
+- `AtomicMarkableReference` ：原子更新带有标记的引用类型。该类将 boolean 标记与引用关联起来。
+
+## 25.4 对象的属性修改类型
+
+- `AtomicIntegerFieldUpdater`:原子更新整形字段的更新器
+
+- `AtomicLongFieldUpdater`：原子更新长整形字段的更新器
+
+- `AtomicReferenceFieldUpdater` ：原子更新引用类型里的字段的更新器
+
+要想原子地更新对象的属性需要两步。
+
+第一步，因为对象的属性修改类型原子类都是抽象类，所以每次使用都必须使用静态方法 newUpdater()创建一个更新器，并且需要设置想要更新的类和属性。
+
+第二步，更新的对象属性必须使用 public volatile 修饰符。
+
+# 26、AQS
+
+## 26.1 什么是AQS？
+
+AQS 的全称是 AbstractQueuedSynchronizer，是一个用来**构建锁和同步器的框架**，像 ReentrantLock，Semaphore，FutureTask 都是基于 AQS 实现的。
+
+## 26.2 AQS的原理
+
+简单来说，AQS 就是维护了一个共享资源，然后使用队列来保证线程排队获取资源的一个过程。
+
+AQS 的原理图如下
+
+![image-20230410171701107](pictures\image-20230410171701107.png)
+
+AQS 核心思想是，如果被请求的共享资源空闲，则将当前请求资源的线程设置为有效的工作线程，并且将共享资源设置为锁定状态。如果被请求的共享资源被占用，那么就需要一套线程阻塞等待以及被唤醒时锁分配的机制，这个机制 AQS 是基于 **CLH 锁** （Craig, Landin, and Hagersten locks） 实现的。
+
+CLH 锁是对自旋锁的一种改进，是一个虚拟的双向队列（虚拟的双向队列即不存在队列实例，仅存在结点之间的关联关系），暂时获取不到锁的线程将被加入到该队列中。AQS 将每条请求共享资源的线程封装成一个 CLH 队列锁的一个结点（Node）来实现锁的分配。在 CLH 队列锁中，一个节点表示一个线程，它保存着线程的引用（thread）、 当前节点在队列中的状态（waitStatus）、前驱节点（prev）、后继节点（next）。
+
+AQS 使用 **int 成员变量 `state` 表示同步状态**，通过内置的 **线程等待队列** 来完成获取资源线程的排队工作。
+
+```java
+// 共享变量，使用volatile修饰保证线程可见性
+private volatile int state;
+```
+
+状态信息 `state` 可以通过 `protected` 类型的`getState()`、`setState()`和`compareAndSetState()` 进行操作。并且，这几个方法都是 `final` 修饰的，在子类中无法被重写。
+
+```java
+//返回同步状态的当前值
+protected final int getState() {
+     return state;
+}
+//设置同步状态的值
+protected final void setState(int newState) {
+     state = newState;
+}
+//原子地（CAS操作）将同步状态值设置为给定值update如果当前同步状态的值等于expect（期望值）
+protected final boolean compareAndSetState(int expect, int update) {
+      return unsafe.compareAndSwapInt(this, stateOffset, expect, update);
+}
+```
+
+## 26.3 AQS资源共享方式
+
+- `Exclusive`：独占，只有一个线程可以执行，如ReentrantLock
+- `Share`：共享，可以多个线程同时执行，如Semaphore，CountDownLatch
+
+## 26.4 如何使用AQS自定义同步器？
+
+第一步，继承AbstractQueuedSynchronizer，并重写指定方法
+
+第二步，将AQS组合在自定义同步组件的实现中，并调用其模板方法，这些模板方法会调用重写的方法
+
+需要重写以下方法：
+
+```java
+//独占方式。尝试获取资源，成功则返回true，失败则返回false。
+protected boolean tryAcquire(int)
+//独占方式。尝试释放资源，成功则返回true，失败则返回false。
+protected boolean tryRelease(int)
+//共享方式。尝试获取资源。负数表示失败；0表示成功，但没有剩余可用资源；正数表示成功，且有剩余资源。
+protected int tryAcquireShared(int)
+//共享方式。尝试释放资源，成功则返回true，失败则返回false。
+protected boolean tryReleaseShared(int)
+//该线程是否正在独占资源。只有用到condition才需要去实现它。
+protected boolean isHeldExclusively()
+```
+
+以**独占式的 ReentrantLock 为例**，state 初始状态为 0， 表示未锁定状态。A 线程进行`lock()`时，会调用` tryAcquire()`独占该锁并将 state+1。此后，其他线程再调用` tryAcquire()`时就会失败，直到 A 线程 `unlock()`到 state=0（即释放锁）为止，其它线程才有机会获取该锁。当然， 释放锁之前，A 线程自己是可以重复获取此锁的（state 会累加），这就是可重入的概念。但要注意，**获取多少次就要释放多么次**，这样才能保证 state 是能回到零态的。
+
+以**共享式的 CountDownLatch 以例**，任务分为 N 个子线程去执行，state 也初始化为 N（注意 N 要与线程个数一致）。这 N 个子线程是并行执行的，每个子线程执行完后 `countDown()`一次，state 会 CAS 减 1。等到所有子线程都执行完后(即 state=0)，会 `unpark()`主调用线程，然后主调用线程就会从 `await()`函数返回，继续后余动作。
+
+ AQS 也支持自定义同步器**同时实现独占和共享**两种方式，如 ReentrantReadWriteLock
+
+
+
+
+
+
+
+
+
