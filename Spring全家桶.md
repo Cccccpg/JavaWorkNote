@@ -530,3 +530,79 @@ Spring Boot 是 Spring 源组织下的子项目，是 Spring 组件一站式解�
 
 在 SpringBoot 应用的每个启动类上都会有个注解`@SpringBootApplication`
 
+```java
+@SpringBootApplication
+public class SpringSecurityJwtGuideApplication {
+      public static void main(java.lang.String[] args) {
+        SpringApplication.run(SpringSecurityJwtGuideApplication.class, args);
+    }
+}
+```
+
+我们可以把 `@SpringBootApplication`看作是 `@Configuration`、`@EnableAutoConfiguration`、`@ComponentScan` 注解的集合。
+
+根据 SpringBoot 官网，这三个注解的作用分别是：
+
+- `@EnableAutoConfiguration`：开启 SpringBoot 的自动配置机制
+- `@ComponentScan`： 扫描被`@Component` (`@Repository`,`@Service`,`@Controller`)注解的 bean，注解默认会扫描该类所在的包下所有的类。
+- `@Configuration`：允许在 Spring 上下文中注册额外的 bean 或导入其他配置类
+
+其中`@EnableAutoConfiguration`注解上又有两个注解，分别为`@AutoConfigurationPackage`和`Import(AutoConfigurationImportSelector.class)`。
+
+1. 其中`@AutoConfigurationPackage`注解从字面意思上看就是自动配置包。其中包含一个`@Improt`注解，它导入一个Registrar的组件，这个注解的作用就是**将主配置类**（`SpringBootConfiguration`标注的类）**所在包及其下面所有子包里面的所有组件扫描到IoC容器中**。所以说默认情况下主配置类所在包及其子包以外的组件，Spring IoC容器是扫描不到的。
+2. 另一个注解`@Import(AutoConfigurationImportSelector.class)`通过`@Import`导入了`EnableAutoConfigurationImportSelector`类，而这个类的`selectImports()`方法会通过`SpringFactoriesLoader`得到大量的配置类。而每个配置类则根据条件配置类做出决策，以实现自动配置的功能。
+
+---
+
+具体来说SpringBoot的自动装配是通过注解实现的，当满足某些条件时，自动装配相应的组件。
+
+1. 判断自动装配开关是否打开。默认`spring.boot.enableautoconfiguration=true`，可在 `application.properties` 或 `application.yml` 中设置；
+
+2. 用于获取`EnableAutoConfiguration`注解中的 `exclude` 和 `excludeName`；
+
+3. 获取需要自动装配的所有配置类，读取`META-INF/spring.factories`；
+
+4. 到这里可能面试官会问你:“`spring.factories`中这么多配置，每次启动都要全部加载么？”。
+
+   **很明显，这是不会的**。因为，这一步有经历了一遍筛选，`@ConditionalOnXXX` 中的所有条件都满足，该类才会生效。
+
+值得注意的是，Spring Boot的自动装配仅限于Spring框架本身提供的组件和第三方库中的Spring组件，对于其他的组件，需要手动进行配置。
+
+## 6.4 Spring Boot Starter是什么？如何自定义？
+
+Spring Boot Starter 是 Spring boot 的核心，可以理解为一个可拔插式的插件。
+
+例如，想使用Reids插件，那么可以导入spring-boot-starter-redis 依赖 Starter 的命名。官方对 Starter 项目的 jar 包定义的 artifactId 是有要求的 ， 当然也可以不遵守 。
+
+ Spring 官 方 Starter 通 常 命 名 为 `spring-boot-starter-{name}`如：`spring-boot-starter-web`，Spring 官方建议非官方的 starter 命名应遵守`{name}-spring-boot-starter` 的格式。
+
+---
+
+自定义starter的步骤如下：
+
+1. 新建一个maven项目，在pom.xml文件中定义好所需要的依赖；
+2. 新建配置类，写好配置项和默认值，使用`@ConfigurationProperties`指明配置前缀；
+3. 新建自动装配类，使用`@Configuration`和`@Bean`进行自动装配；
+4. 新建Spring.factories文件，用于指定自动装配类的路径；
+5. 将starter安装到maven仓库，让其他项目能够引用。
+
+## 6.5 Spring Boot核心配置文件
+
+Spring boot 核 心 的 两个配置文件 ：
+
+1. ` bootstrap` (. yml 或 者 . properties)：bootstrap 由父 ApplicationContext 加载的，比 applicaton 优先加载，配置在应用程序上下文的引导阶段生效。一般来说我们在 Spring Cloud Config 或者 Nacos 中会用到它。且 bootstrap 里面的属性不能被覆盖； 
+2. `application `(. yml 或者 . properties)：由 ApplicatonContext 加 载，用于 Spring boot 项目的自动化配置
+
+## 6.6 Spring Boot打成jar和普通jar有什么区别？
+
+Spring Boot 打成的 jar **无法被其他项目依赖**，主要还是他和普通 jar 的结构不同。
+
+普通的 jar 包，解压后直接就是包名，包里就是我们的代码，而 Spring Boot 打包成的可执行 jar 解压后，在\BOOT-INF\classes 目录下才是我们的代码，因此无法被直接引用。如果非要引用，可以在 pom.xml 文件中增加配置， 将 Spring Boot 项目打包成两个 jar ，一个可执行，一个可引用
+
+## 6.7 Spring Boot和Spring Cloud的区别？
+
+SpringBoot 专注于快速、方便的开发**单个微服务个体**，SpringCloud 关注**全局的服务治理框架**。
+
+SpringCloud 将 SpringBoot 开发的一个个单体微服务整合并管理起来，为各个微服务之间提供配置管理、服务发现、断路器、路由、 微代理、事件总线、全局锁、决策竞选、分布式会话等等集成服务。
+
+SpringBoot 可以离开SpringCloud 独立开发项目 ， 但是 SpringCloud 离不开 SpringBoot ，**属于依赖的关系**。
