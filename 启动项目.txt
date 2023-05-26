@@ -1,0 +1,7 @@
+查看docker安装的所有项目：docker images
+查看docker创建的容器：docker ps
+启动MongoDB：docker exec -it mymongo /bin/bash
+启动Redis:
+1. docker run -d -p 6379:6379 redis:6.2.6
+2. docker exec -it 00b77bf992d7 /bin/bash
+3. redis-cli

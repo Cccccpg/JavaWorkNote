@@ -1,0 +1,55 @@
+- 常见的Linux版本：Centos、Ubuntu、RHEL、Fedora、Debian
+
+![image-20230509160204291](pictures\image-20230509160204291.png)
+
+- 常见的远程连接工具：XShell、FinalShell、SecureCRT、Putty
+
+# 一、Linux常用命令
+
+- 进入用户主目录：`cd`或`cd ~`
+- 进入根目录：`cd /`
+- 返回上级目录：`cd ..`
+- 返回上两级目录：`cd ../..`
+- 切换到上一个操作所在目录：`cd -`
+- 切换目录：`cd/home/admin`
+
+- 查看当前目录下文件：`ls`
+- 查看当前目录下文件（包含隐藏文件）：`ls -a`
+- 查看该目录下所有目录和文件的详细信息：`ll`
+- 创建名为`mydirectory`的新目录：`mkdir mydirectory`
+- 列出当前目录及子目录下所有文件和文件夹：`find .`
+- 在`/home`目录下查找所有以`.txt`结尾的文件名：`find /home -name ".txt"`
+- 显示当前工作目录的路径：`pwd`
+- 删除名为`mydirectory`的**空目录**：`rmdir mydirectory`
+- 删除名为`mydirectory`的目录：`rm mydirectory`
+
+- 创建文件：`touch file`
+- 创建两个文件：`touch file1 file2`
+- 将文件file重命名为file1：`mv file file1`
+- 将 `file.txt` 文件**复制**到 `/home` 目录下，并重命名为 `file.txt`（**要求提示**）：`cp -i file.txt /home/file.txt`
+- 将 `file.txt` 文件**复制**到 `/home` 目录下，并重命名为 `file.txt`（**不要求提示**）：`cp file.txt /home/file.txt`
+- 将 `file.txt` 文件**移动**到 `/home` 目录下，并重命名为 `file.txt`：`mv file.txt /home/file.txt`
+- 删除当前目录下所有文件和文件夹：`rm -rf *`
+- 查看file文件：`cat file`
+- 修改文件的内容：`vim file`（输入wq代表写入内容并退出，即保存；输入q！代表强制退出，不保存）
+
+- 重启当前系统：`reboot`
+- 关闭当前系统：`shutdown`
+- 查看当前系统下的进程信息：`ps -aux`
+- 打开任务管理器查看进程(动态查看进程)：`top`
+- 查看当前系统中开放的端口：`netstat -anptu`
+- 从普通用户切换到root用户：`su -`
+- 从root用户切换到普通用户：`su - admin`
+- 查看当前用户名：`whoami`
+- 查看系统中所有登录用户的信息：`who -q`
+- 退出当前终端窗口：`exit`
+- 杀死进程（-9表示强制终止），先用ps查找进程，然后用kill杀掉：`kill -9 进程的pid`
+- 压缩文件：`tar -zcvf file.tar.gz file`(打包和压缩是一起的，所以文件的后缀名一般是`.tar.gz`)
+- 解压文件：`tar xvf file.tar.gz`
+
+- 列出所有可安装的软件清单：`yum list`
+- 查找软件包：`yum search`
+- 安装指定软件：`yum install <package name>`
+- 更新指定软件：`yum update <package name>`
+- 删除指定软件：`yum remove <package name>`
+- 更新所有软件：`yum update`
