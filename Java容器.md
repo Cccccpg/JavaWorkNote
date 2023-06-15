@@ -1,9 +1,11 @@
 # 1、集合框架和底层数据结构
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679626675887-e82a0029-f3c1-4578-a2c2-8afa82f3e5f9.png#averageHue=%23f7f7f7&clientId=u4e6dee48-018a-4&from=paste&height=684&id=u28fc4412&name=image.png&originHeight=684&originWidth=945&originalType=binary&ratio=1&rotation=0&showTitle=false&size=49357&status=done&style=none&taskId=u4d23d1dd-c8de-4de1-a604-b280570f4fb&title=&width=945)
+
 **HashSet：**底层数据结构是hash表，基于HashMap实现。
 **HashMap：**
-JDK1.8 之前 HashMap 由数组+链表组成的，数组是 HashMap 的主体，链表则是主要为了解决哈希冲突而存在的（“拉链法”解决冲突）。 
-JDK1.8 以后在解决哈希冲突时有了较大的变化，**当链表长度大于阈值（默认为 8）**（将链表转换成红黑树前会判断，**如果当前数组的长度小于 64，那么会选择先进行数组扩容**，而不是转换为红黑树）时，将链表转化为红黑树，以减少搜索时间。  
+	JDK1.8 之前：HashMap 由数组+链表组成的，数组是 HashMap 的主体，链表则是主要为了解决哈希冲突而存在的（“拉链法”解决冲突）。 
+	JDK1.8 以后：在解决哈希冲突时有了较大的变化，**当链表长度大于阈值（默认为 8）**（将链表转换成红黑树前会判断，**如果当前数组的长度小于 64，那么会选择先进行数组扩容**，而不是转换为红黑树)时，将链表转化为红黑树，以减少搜索时间。  
+
 # 2、哪些集合类是线程安全的？
 
 - **Vector**：就比 arraylist 多了个同步化机制（线程安全），因为效率较低， 现在已经不太建议使用。在 web 应用中，特别是前台页面，往往效率（页面响 应速度）是优先考虑的。 
@@ -72,10 +74,11 @@ public boolean add(E e) {
 - **内存空间占用：** `ArrayList` 的空间浪费主要体现在在 list 列表的结尾会预留一定的容量空间； `LinkedList` 的空间花费则体现在它的每一个元素都需要消耗比 ArrayList 更多的空间（因为要存放直接后继和直接前驱以及数据）。  
 # 5、ArrayList的扩容机制
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679883584962-b1a0b6df-a801-4710-b1fe-efe19419117d.png#averageHue=%23f6f6f6&clientId=u44217d40-74b7-4&from=paste&height=684&id=uf8bead80&name=image.png&originHeight=752&originWidth=1422&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=122113&status=done&style=none&taskId=u1abe2f2c-4fa0-4e7e-b057-6a40d0a65d6&title=&width=1292.7272447081643)
-`ArrayList`的底层采用数组来存储数据，在往 `ArrayList` 里面添加元素时，才会涉及到扩容机制。由于采用的是数组存储，所以会给数组设置默认长度10。
-当数组中没有元素时，是没有设置为默认长度10 的，数组是一个空数组。当要添加元素时，会进入 `ensureCapacityInternal()`进行判断，如果数据数组为空数组，在添加第一个元素时才将数组长度扩容为默认值 10，如果数组不为空数 组 ， 就 在 `ensureCapacityInternal()`里 面 调 用 `ensureExplicitCapacity()`来判断是否需要扩容。
-如果需要扩容，才调用 `grow()`方法进行扩容。在`grow()`方法里面，会通过右移位运算将数组长度的新长度扩容为原来的 1.5 倍。扩容后如果新容量不能满足所需容量，就将新容量扩大为所需容量，如果新容量大于 `MAX_ARRAY_SIZE`,就调用`hugeCapacity()`方法来比较 `minCapacity` 和 `MAX_ARRAY_SIZE` 的大小，如果 `minCapacity` 大于最 大容量，则新容量则为 `Integer.MAX_VALUE`，否则，新容量大小则为 `MAX_ARRAY_SIZE`，即为 `Integer.MAX_VALUE - 8`。
+`ArrayList`的底层采用`Object`数组来存储数据，在往 `ArrayList` 里面添加元素时，才会涉及到扩容机制。由于采用的是数组存储，所以会给数组设置默认长度10。
+当数组中没有元素时，是没有设置为默认长度10 的，数组是一个空数组。当要添加元素时，会进入 `ensureCapacityInternal()`进行判断，如果数据数组为空数组，在添加第一个元素时才将数组长度扩容为默认值 10，如果数组不为空数组 ， 就在 `ensureCapacityInternal()`里 面 调 用 `ensureExplicitCapacity()`来判断是否需要扩容。
+如果需要扩容，才调用 `grow()`方法进行扩容。在`grow()`方法里面，会通过右移位运算将数组长度的新长度扩容为原来的 1.5 倍。扩容后如果新容量不能满足所需容量，就将新容量扩大为所需容量，如果新容量大于 `MAX_ARRAY_SIZE`,就调用`hugeCapacity()`方法来比较 `minCapacity` 和 `MAX_ARRAY_SIZE` 的大小，如果 `minCapacity` 大于最大容量，则新容量则为 `Integer.MAX_VALUE`，否则，新容量大小则为 `MAX_ARRAY_SIZE`，即为 `Integer.MAX_VALUE - 8`。
 最后将数组中的元素拷贝到扩容后的这个数组， 并将原数组的引用设置为拷贝后的数组。 
+
 # 6、HashSet如何检查重复？
 把对象添加到HashSet中时，
 
@@ -86,10 +89,12 @@ public boolean add(E e) {
 
 简单总结：
 首先比较hashCode是否相等，再使用equals比较值是否相等。
+
 # 7、HashMap的底层实现
 ## 7.1 JDK 1.8之前
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679887354948-f981415c-e278-4a9e-b7fc-2739449b0cd5.png#averageHue=%23fbf5ee&clientId=u490ccfef-0f43-4&from=paste&height=245&id=u0b5493c3&name=image.png&originHeight=269&originWidth=432&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=12674&status=done&style=none&taskId=u8674cb8d-3668-4827-a78f-3ac24f9e6fc&title=&width=392.7272642151385)
 底层采用**数组+链表**，HashMap 通过它的`hash()`方法获取 key 对应的`hashCode`值，然后通过`(n-1) & hash` 判断当前元素存放的位置，如果当前位置存在元素的话，就判断该元素与要存入的 hash 值以及 key 是否相同，如果相同就直接覆盖，不相同的话，就通过拉链法解决 hash 冲突，将元素存放大链表中。
+
 ## 7.2 JDK 1.8之后  
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679887361430-2c8688f6-ec3a-43dd-b33e-cf971e94b21b.png#averageHue=%23f0eeed&clientId=u490ccfef-0f43-4&from=paste&height=365&id=u9a462031&name=image.png&originHeight=401&originWidth=533&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=18055&status=done&style=none&taskId=u56e2021c-37b0-4666-993c-0323e5ac772&title=&width=484.5454440432149)
 JDK1.8 之后底层采用的是**数组+（链表和红黑树）**，主要不同在于解决hash冲突时，当链表长度超过设定的阈值长度时（默认为 8）,会先判断数组的长度是否小于 64(初始最大容量)，如果小于的话，并不是直接转为红黑树，而是进行扩容，只有当数组长度大于 64 时，才会将对应的链表转换为红黑树。
@@ -100,10 +105,24 @@ JDK1.8 之后底层采用的是**数组+（链表和红黑树）**，主要不�
 （3）判断 table[i]的首个元素是否和 key 一样，如果相同直接覆盖 value，否则转向 4，这里的相同指的是 hashCode 以及 equals； 
 （4）判断 table[i] 是否为 treeNode，即 table[i] 是否是红黑树，如果是红黑树，则直接在树中插入键值对，否则转向 5； 
 （5）遍历 table[i]，判断链表长度是否大于 8，大于 8 的话把链表转换为红黑树，在红黑树中执行插入操作，否则进行链表的插入操作；遍历过程中若发现 key 已经存在直接覆盖 value 即可；  
-（6）插入成功后，判断实际存在的键值对数量 size 是否超多了最大容量 threshold，如果超过，进行扩容。  
+（6)插入成功后，判断实际存在的键值对数量 size 是否超过了最大容量 `threshold`(数组长度*0.75)，如果超过，进行扩容。  
+
+## 7.4 为什么负载因子是0.75？
+
+loadFactor 太大导致查找元素效率低，存放的数据拥挤，太小导致数组的利用率低，存放的数据会很分散。loadFactor 的默认值为 **0.75f 是官方给出的一个比较好的临界值，可以保证查询性能和空间利用效率之间取得平衡**。
+
+## 7.5 讲一讲HashMap的扩容机制
+
+1. 初始化或达到扩容阈值（数组长度*0.75）时，调用`resize()`方法进行扩容；
+2. 创建新的数组，新数组长度是原来数组长度的2倍；
+3. 将原数组上的数据移到新数组上，其中没有Hash冲突的key，直接计算其在新数组中的索引位置添加；
+4. 如果存在Hash冲突的key，先采用链地址法解决，如果是红黑树，则直接在红黑树中添加；
+5. 所有的元素移动完毕后，原数组的引用替换为新数组的引用，完成扩容操作。
+
 # 8、HashMap的长度为什么是2的幂次方？
 当我们往 HashMap 里面 put 元素的时候，会通过 hashMap 的 hash 方法，获取 key 对应的 hashCode 值，然后拿这个值去判断该元素要存放在那个地方，这里采用的是`(n-1) & hash` ,其中 n 为 HashMap 的长度，这个操作只有当 n 是 2 的幂次方时，`(n-1) & hash` 才和 hash%n 表示的是一个意思，这样才能找到这个 key 在数组中对应的位置。
-如果不是 2 的幂次方， (n-1) & hash 是不等于 hash%n 的，之所以采用位运算的好处是：相较于%操作，它的效率更高。  
+如果不是 2 的幂次方， `(n-1) & hash` 是不等于 `hash%n` 的，之所以采用位运算的好处是：相较于%操作，它的**效率更高，保证散列均匀分布**。  
+
 # 9、HashMap有哪几种常见的遍历方式？
 
 1. 迭代器（Iterator）方式遍历
