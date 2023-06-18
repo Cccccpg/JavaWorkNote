@@ -320,11 +320,17 @@ private SmsService smsService;
 
 ## 3.1 谈谈自己对Spring AOP的理解
 
-AOP(Aspect-Oriented Programming:面向切面编程)能够将那些**与业务无关**，却**为业务模块所共同调用的逻辑或责任**（例如事务处理、日志管理、权限控制等）封装起来，便于**减少系统的重复代码**，**降低模块间的耦合度**，并有利于未来的**可拓展性**和**可维护性**。
+AOP(Aspect-Oriented Programming:面向切面编程)能够将那些**与业务无关，但却对多个对象产生影响的公共行为和逻辑**（例如事务处理、日志管理、权限控制等）抽取公共模块复用，便于**减少系统的重复代码**，**降低模块间的耦合度**，并有利于未来的**可拓展性**和**可维护性**。
 
 Spring AOP 就是**基于动态代理**的，如果要代理的对象，实现了某个接口，那么 Spring AOP 会使用 **JDK Proxy**，去创建代理对象，而对于没有实现接口的对象，就无法使用 JDK Proxy 去进行代理了，这时候 Spring AOP 会使用 **Cglib** 生成一个被代理对象的子类来作为代理，如下图所示：
 
 ![SpringAOPProcess](https://oss.javaguide.cn/github/javaguide/system-design/framework/spring/230ae587a322d6e4d09510161987d346.jpeg)
+
+### 3.1.1 常见的AOP使用场景
+
+- 记录操作日志：使用AOP中的环绕通知+切点表达式来实现；
+- 缓存处理
+- Spring中内置的事务
 
 ## 3.2 Spring AOP和AspectJ AOP有什么区别？
 
@@ -511,6 +517,12 @@ Spring 事务的传播行为是指：当多个事务同时存在的时候，Spri
 - **`ISOLATION_REPEATABLE_READ`** : 对同一字段的多次读取结果都是一致的，除非数据是被本身事务自己所修改，**可以阻止脏读和不可重复读，但幻读仍有可能发生。**
 
 - **`ISOLATION_SERIALIZABLE`** : 最高的隔离级别，完全服从 ACID 的隔离级别。所有的事务依次逐个执行，这样事务之间就完全不可能产生干扰，也就是说，**该级别可以防止脏读、不可重复读以及幻读**。但是这将严重影响程序的性能。通常情况下也不会用到该级别。
+
+## 5.4 Spring事务中失效的场景有哪些？
+
+- 异常捕获处理，自己处理了异常，没有抛出，手动抛出就行；
+- 抛出检查异常，配置rollbackFor属性为Exception；
+- 非public方法，改为public；
 
 # 6、Spring Boot
 
