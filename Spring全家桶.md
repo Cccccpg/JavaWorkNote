@@ -306,17 +306,46 @@ private SmsService smsService;
 
 ## 2.9 Bean的生命周期了解吗？
 
-![Spring Bean 生命周期](https://images.xiaozhuanlan.com/photo/2019/b5d264565657a5395c2781081a7483e1.jpg)
+![image-20230619144343597](pictures\image-20230619144343597.png)
 
-1. 实例化：创建Bean对象实例。
-2. 属性赋值：为Bean对象的属性设置值，可以通过构造函数注入、setter方法注入等方式。
-3. BeanPostProcessor的预初始化：如果Bean实现了BeanPostProcessor接口，那么会调用它们的postProcessBeforeInitialization()方法。
-4. 初始化：如果Bean实现了InitializingBean接口，那么会调用它的afterPropertiesSet()方法，或者在配置文件中指定了init-method方法，也会执行。
-5. BeanPostProcessor的后初始化：如果Bean实现了BeanPostProcessor接口，那么会调用它们的postProcessAfterInitialization()方法。
-6. 使用：Bean对象被应用程序使用。
-7. 销毁：如果Bean实现了DisposableBean接口，那么会调用它的destroy()方法，或者在配置文件中指定了destroy-method方法，也会执行。
+1. **通过BeanDefinition获取Bean的定义信息**，比如类的全路径，是否延迟加载，是否是单例等；
+1. **调用构造函数实例化Bean** ；
+1. **Bean的依赖注入**，比如set方法注入，平时用的`@Autowire`就是在这一步完成的；
+1. **处理Aware接口**，比如BeanNameAware、BeanFactoryAware、ApplicationContextAware；
+1. **Bean的后置处理器BeanPostProcessor-befor**；
+1. **初始化方法**；
+1. **Bean的后置处理器BeanPostProcessor-after**，主要就是对Bean进行增强；
+1. **销毁Bean**；
 
-# 3、Spring AoP
+## 2.10 Spring Bean中的循环依赖问题
+
+循环依赖（循环引用）其实就是两个或两个以上的bean互相持有对方，最终形成闭环。比如A依赖B，B依赖A。
+
+在Spring框架中根据三级缓存已经解决了大部分的循环依赖。
+
+1. 一级缓存：单例池，缓存已经经历了完整的生命周期，已经初始化完成的bean对象；（解决不了循环依赖）
+2. 二级缓存：缓存早期的bean对象（生命周期还没走完）；
+3. 三级缓存：缓存的是ObjectFactory，表示对象工厂，用来创建某个对象的。
+
+### 2.10.1 三级缓存具体是怎么解决循环依赖的呢？（具体流程是什么？）
+
+<img src="pictures\image-20230619152949493.png" alt="image-20230619152949493" style="zoom:67%;" />
+
+1. 先实例化A对象，同时会创建ObjectFactory对象存入三级缓存中；
+2. A在初始化的时候需要B对象，这时候回去创建B对象；
+3. B对象实例化完成，也会创建ObjectFactory对象存入三级缓存；
+4. B对象需要注入A，可以通过三级缓存中的ObjectFactory对象生成A的半成品对象存入二级缓存；（此时的A对象可以是普通对象，也可以是代理对象）
+5. B通过二级缓存获取到A的对象后，就可以正常注入A，然后B对象创建成功后，将对象B存入一级缓存；
+6. 返回到A对象，因为此时B对象已经创建成功了，所以A对象可以直接注入B对象，完成对象A的创建，并存入一级缓存中；
+7. 删除二级缓存中A的半成品对象；
+
+### 2.10.2 构造方法出现了循环依赖怎么解决？
+
+由于构造函数是在bean的生命周期中第一个执行的，三级缓存并不能解决构造函数的依赖注入问题。
+
+所以**可以使用`@Lazy`懒加载注解解决**，什么时候需要对象，再进行bean对象的创建。
+
+# 3、Spring AOP
 
 ## 3.1 谈谈自己对Spring AOP的理解
 
@@ -422,7 +451,7 @@ Spring MVC 模式下我们一般把后端项目分为 Service 层（处理业务
 
 Spring MVC的工作原理如下图：
 
-![img](https://oss.javaguide.cn/github/javaguide/system-design/framework/spring/de6d2b213f112297298f3e223bf08f28.png)
+![image-20230619160237862](pictures\image-20230619160237862.png)
 
 1. 客户端发送请求，`DispatcherServlet`拦截请求；
 2. `DispatcherServlet`根据请求信息调用`HandlerMapping`。`HandlerMapping`根据url去匹配查找能处理`Handler`（也就是常说的`Controller`控制器），并将请求涉及到的拦截器和`Handler`一起封装。
@@ -431,6 +460,12 @@ Spring MVC的工作原理如下图：
 5. `ViewResolver` 会根据逻辑 `View` 查找实际的 `View`。
 6. `DispatcherServlet`会把返回的`Model`传给`View`（视图渲染）。
 7. 最后再把`View`返回给客户端。
+
+但是现在的开发过程基本都是接口开发、前后端分离，采用json格式传递数据，并没有ModelAndView，所以现在的处理流程会简单很多：
+
+![image-20230619160509569](pictures\image-20230619160509569.png)
+
+具体的步骤前半部分与之前一样，只是在controller上加个@ResponseBody注解，将结果转换为JSON并响应，并没有视图那一步。
 
 ## 4.4 统一异常处理怎么做？
 
@@ -551,18 +586,19 @@ public class SpringSecurityJwtGuideApplication {
 }
 ```
 
-我们可以把 `@SpringBootApplication`看作是 `@Configuration`、`@EnableAutoConfiguration`、`@ComponentScan` 注解的集合。
+我们可以把 `@SpringBootApplication`看作是 `@SpringBootConfiguration`、`@EnableAutoConfiguration`、`@ComponentScan` 注解的集合。
 
 根据 SpringBoot 官网，这三个注解的作用分别是：
 
 - `@EnableAutoConfiguration`：开启 SpringBoot 的自动配置机制
 - `@ComponentScan`： 扫描被`@Component` (`@Repository`,`@Service`,`@Controller`)注解的 bean，注解默认会扫描该类所在的包下所有的类。
-- `@Configuration`：允许在 Spring 上下文中注册额外的 bean 或导入其他配置类
+- `@SpringBootConfiguration`：允许在 Spring 上下文中注册额外的 bean 或导入其他配置类
 
-其中`@EnableAutoConfiguration`注解上又有两个注解，分别为`@AutoConfigurationPackage`和`Import(AutoConfigurationImportSelector.class)`。
+其中`@EnableAutoConfiguration`注解是实现自动配置的核心注解。该注解**通过`@Import`注解导入对应的配置选择器**，内部其实就是读取了该项目和该项目引用下的jar包的classpath路径下**META-INF/spring.factories**文件中**所有配置类的全类名**。
 
-1. 其中`@AutoConfigurationPackage`注解从字面意思上看就是自动配置包。其中包含一个`@Improt`注解，它导入一个Registrar的组件，这个注解的作用就是**将主配置类**（`SpringBootConfiguration`标注的类）**所在包及其下面所有子包里面的所有组件扫描到IoC容器中**。所以说默认情况下主配置类所在包及其子包以外的组件，Spring IoC容器是扫描不到的。
-2. 另一个注解`@Import(AutoConfigurationImportSelector.class)`通过`@Import`导入了`EnableAutoConfigurationImportSelector`类，而这个类的`selectImports()`方法会通过`SpringFactoriesLoader`得到大量的配置类。而每个配置类则根据条件配置类做出决策，以实现自动配置的功能。
+在这些配置类中所定义的Bean会**根据条件注解所指定的条件**来决定是否要将其导入到Spring容器中。
+
+比如`@ConditionalOnClass`注解，判断是否有对应的class文件，如果有则加载该类，把这个配置类的所有Bean放入到Spring中使用。
 
 ---
 
