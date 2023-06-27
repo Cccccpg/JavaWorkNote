@@ -51,8 +51,9 @@ public class Main{
 ```
 **建议**：在读多写少时，推荐使用`CopyOnWriteArrayList`，因为这个类里面是通过lock锁来实现线程同步的。
 ## 3.2 HashSet
-**HashSet底层数据结构是HashMap，那么为什么HashSet在执行**`**add**`**方法时，只添加1个元素，而不是HashMap中同时添加key和value呢？**
+**HashSet底层数据结构是HashMap，那么为什么HashSet在执行**`add`**方法时，只添加1个元素，而不是HashMap中同时添加key和value呢？**
 查看源码：
+
 ```java
 private static final Object PRESENT = new Object();
 
