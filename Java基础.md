@@ -1,7 +1,7 @@
 # 1、基础
 ## 1.1 JDK JRE JVM的关系
 
-- **JDK（Java Development Kit）**是针对 Java 开发员的产品，是整个 Java 的核 心，包括了 Java 运行环境 JRE、Java 工具和 Java 基础类库。 
+- **JDK（Java Development Kit）**是针对 Java 开发员的产品，是整个 Java 的核心，包括了 Java 运行环境 JRE、Java 工具和 Java 基础类库。 
 - **JRE（Java Runtime Environment）**是运行 Java 程序所必须的环境的集合，包 含 JVM 标准实现及 Java 核心类库。 
 - **JVM（Java Virtual Machine）**Java 虚拟机，是整个 java 实现跨平台的最核心 的部分，能够运行以 Java 语言写作的软件程序。 
 
@@ -92,6 +92,7 @@ StringBuilder > StringBuffer > String
 **String：**操作**少量数据**；
 **StringBuffer：多线程**操作字符串缓冲区下操作大量数据；
 **StringBuilder：单线程**操作字符串缓冲区下操作大量数据；
+
 # 3、关键字
 ## 3.1 static
 作用：方便在没有创建对象时，调用方法和变量、优化程序性能。
@@ -285,9 +286,9 @@ class Child extends Father{
 缺点：但没有面向对象易维护、易复用、易扩展，开销比较大，比较消耗资源。  
 ## 4.2 封装、继承、多态
 
-- **封装**：封装就是隐藏对象的属性和实现细节，仅对外公开接口，控制在程序中属性的读和修改的访问级别。（private / get/set 方法）。就好像我们看不到挂在墙上的空调的内部的零件信息（也就是属性），但是可以通过遥控器（方法）来控制空调。
+- **封装**：封装就是隐藏对象的属性和实现细节，仅对外公开接口，控制在程序中属性的读和修改的访问级别。（private/get/set 方法）。就好像我们看不到挂在墙上的空调的内部的零件信息（也就是属性），但是可以通过遥控器（方法）来控制空调。
 - **继承**：继承就是子类继承父类的特征和行为，使得子类对象（实例）具有父类的实例域和方法，或子类从父类继承方法，使得子类具有父类相同的行为。 通过使用继承，可以快速地创建新的类，可以提高代码的重用，程序的可维护性，节省大量创建新类的时间 ，提高我们的开发效率。
-  - 子类**拥有**父类对象所有的属性和方法（<u>包括私有属性和私有方法</u>），但是父类中的私有属性和方法子类是**无法访问**，**只是拥有**。
+  -  子类**拥有**父类对象所有的属性和方法（<u>包括私有属性和私有方法</u>），但是父类中的私有属性和方法子类是**无法访问**，**只是拥有**。
   - 子类可以拥有自己属性和方法，即**子类可以对父类进行扩展**。
   - 子类可以用自己的方式实现父类的方法。
 
@@ -354,7 +355,7 @@ class Child extends Father{ //继承
 **不同点**：
 
 1. 接口中只能有抽象方法，抽象类中可以有非抽象的方法。
-2. 接口中变量只能是`public/static/final `类型，抽象类则可以有其他变量。
+2. 接口中变量只能是`public/static/final `类型，抽象类则不一定。
 3. 一个类可以实现多个接口，但是只能继承一个抽象类。
 4. 接口的方法默认是 public ，而抽象方法可以有 `public、protected、default`，但不能用 private  
 
@@ -550,6 +551,7 @@ Java IO流的40多个类都是从四个抽象类基类派生出来的：
 `OutputStream`：字节输出流
 `Reader`：字符输入流
 `Writer`：字符输出流
+
 ## 10.1 有了字节流为什么还需要字符流？
 虽然字节流是信息处理的最小单位，但字符流是JVM转换得到，这个过程**比较耗时**，并且还**容易出现乱码问题**，因此Java在IO中就提供了可直接操作字符的字符流。
 # 11、常见IO模型
@@ -591,6 +593,7 @@ AIO就是**异步IO模型，**AIO 也就是 NIO 2。Java 7 中引入了 NIO 的�
 **优点：线程不需要阻塞； 		缺点：每个线程都需要多次轮询**
 **异步非阻塞AIO** ： 后来你家用上水开会发声的壶，你只需听到响声就知水开了，期间可以随便玩（**通知**）
 **优点：非阻塞，不需要轮询**
+
 # 12、Java反射机制
  Java 反射机制指在运行状态中，对于任意一个类，都能够获取这个类的所有属性和方法；对于任意一个对象，都能够调用它的任意一个方法和属性。
 这种动态获取类信息以及动态调用对象的方法的功能称为 **Java 语言的反射机制**。  
@@ -635,29 +638,57 @@ public class Demo {
 3. 反射方法**的调用通常比直接调用方法慢很多**，因为它需要进行许多额外的操作，如方法解析、参数类型检查、安全检查等。
 4. 反射方法的调用通常**不能进行编译时优化**，因此会导致运行时性能低下。
 # 13、Java异常
-在Java中，所有的异常都有一个共同的祖先java.lang包中的 Throwable 类。
-Throwable 类有两个重要的子类 **Exception**（异常）和 **Error**（错误）。
-Exception **能被程序本身处理**( try/catch )，Error 是**⽆法处理**的(只能尽量避免)。
-Exception 和 Error 二者都是 Java 异常处理的重要⼦类，各自都包含⼤量⼦类。  
-## 13.1 常见异常
-SQLException 操作数据库异常 
-IOException 输入输出异常 
-ConcurrentModificationException 并发修改异常 
-NullPointException 空指针异常 
-ArrayOutOfBoundsException 数组下标越界异常 
-ClassCastException 强制类型转换异常 
-Virtual MachineError  JVM运行错误
-StackOverFlowError 栈溢出错误 
-OutOfMemoryError 堆空间不足错误 
+## 13.1 Java中的异常体系说一下
+
+在Java中，所有的异常都有一个共同的祖先`java.lang`包中的 `Throwable` 类。`Throwable` 类有两个重要的子类 **Exception**（异常）和 **Error**（错误）。
+Exception **能被程序本身处理**( try/catch )，Error 程序本身**⽆法处理**，只能尽量避免。Exception 和 Error 二者都是 Java 异常处理的重要⼦类，各自都包含⼤量⼦类。  
+
+## 13.2 常见异常
+`SQLException` 操作数据库异常 
+`IOException `输入输出异常 
+`ConcurrentModificationException `并发修改异常 
+`NullPointException `空指针异常 
+`ArrayOutOfBoundsException `数组下标越界异常 
+`ClassCastException `强制类型转换异常 
+`VirtualMachineError`  JVM运行错误
+`StackOverFlowError` 栈溢出错误 
+`OutOfMemoryError` 堆空间不足错误 
+
+## 13.3 异常处理方式有哪些？
+
+1. `try-catch-finally`：其中try用来捕获异常，catch用来处理捕获到的异常，finally用来关闭一些资源，无论是否捕获或处理异常，finally都会被执行。
+2. `throws`：加在方法生命中用来抛出异常，其实并没有处理异常，而是将异常抛给此方法的调用者处理。
+3. 自定义异常类，但是必须继承某个异常类，比如编译时异常或运行时异常。
+
+## 13.4 finally块一定会被执行吗？
+
+不一定，当出现以下三种特殊情况，finally块不会被执行：
+
+1. 在`try`或`finally`块中用了`System.exit(int)`退出程序；
+2. 程序所在的线程死亡；
+3. 关闭CPU。
+
 # 14、Java序列化
-序列化就是将对象写入到IO流中。
-**为什么要序列化？**
-将 Java 对象转换成字节序列，这些字节序列更加便于通过网络传输或存储在磁盘上，在需要时可以通过反序列化恢复成原来的对象。  
+序列化就是将对象转换成字节流以便存储或传输，反序列化就是将字节序列转换回对象的过程。
+## 14.1 为什么要序列化和按序列化？
+将 Java 对象转换成字节序列，这些字节序列更加便于通过网络传输或存储在磁盘上，在需要时可以通过反序列化恢复成原来的对象。通过序列化与反序列化可以实现不同计算机环境或进程间的数据传输与共享。
+
+## 14.2 为什么要实现Serializable接口？
+
+实现Serializable接口是为了支持序列化和反序列化操作，只是起到一个标记作用。
+
+1. 可以确保只有那些被设计为可序列化的类的对象才能序列化；
+2. 规范了类的行为，表示该类的对象可以被序列化；
+
 # 15、深拷贝与浅拷贝
+
+## 15.1 Java中的深拷贝和浅拷贝了解吗？
+
 **浅拷贝：** 对基本数据类型进行值传递，对引用数据类型，**复制一个引用**指向原始引用的对象，就是让复制的引用和原始引用指向同一个对象。  
 **深拷贝：** 对基本数据类型进行值传递，对引用数据类型，**创建一个新的对象**， 并**复制**其内容，两个引用指向两个对象，但对象内容相同。  
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679623081652-52078d27-a1ae-45f2-a1f4-380158f6314b.png#averageHue=%23f8f8f8&clientId=u4417e0f8-1416-4&from=paste&height=273&id=u2606af47&name=image.png&originHeight=273&originWidth=791&originalType=binary&ratio=1&rotation=0&showTitle=false&size=18817&status=done&style=none&taskId=ua6c57ac4-9ac1-4878-83c1-75fc078dd49&title=&width=791)
-## 15.1 深拷贝实现方式
+
+## 15.2 深拷贝实现方式
 重载`clone`方法
 ```java
 class Address implements Cloneable{
@@ -722,15 +753,24 @@ public class Main {
 ```
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679624312548-77de3d3e-4229-41b4-8834-a13f9b90b6d2.png#averageHue=%23373737&clientId=u4417e0f8-1416-4&from=paste&height=62&id=u65e984a7&name=image.png&originHeight=62&originWidth=185&originalType=binary&ratio=1&rotation=0&showTitle=false&size=1040&status=done&style=none&taskId=u8bfa93e9-66bb-40db-b9ee-d36c17e1e71&title=&width=185)
 # 16、常见的Object方法
-`Object clone()`：创建与该对象的类相同的新对象。  
-`boolean equals(Object)`：比较两对象是否相等。  
-`void finalize()`：当垃圾回收器确定不存在对该对象的更多引用时，对象垃圾回收器调用该方法。 
-`Class getClass()`：返回一个对象运行时的实例类。 
-`int hashCode()`：返回该对象的散列码值。 
-`void notify()`：唤醒等待在该对象的监视器上的一个线程。 
-`void notifyAll()`：唤醒等待在该对象的监视器上的全部线程。 
+
 `String toString()`：返回该对象的字符串表示。 
-`void wait()`：在其他线程调用此对象的notify() 方法或 notifyAll()方法前，导致当前线程等待。  
+
+`Object clone()`：创建与该对象的类相同的新对象。
+
+`Class getClass()`：返回一个对象运行时的实例类。 
+
+`boolean equals(Object)`：比较两对象是否相等。
+
+`int hashCode()`：返回该对象的散列码值。 
+
+`void wait()`：在其他线程调用此对象的notify() 方法或 notifyAll()方法前，导致当前线程等待。 
+
+`void notify()`：唤醒等待在该对象的监视器上的一个线程。 
+
+`void notifyAll()`：唤醒等待在该对象的监视器上的全部线程。 
+
+`void finalize()`：当垃圾回收器确定不存在对该对象的更多引用时，对象垃圾回收器调用该方法。 
 
 
 

@@ -594,9 +594,9 @@ public class SpringSecurityJwtGuideApplication {
 - `@ComponentScan`： 扫描被`@Component` (`@Repository`,`@Service`,`@Controller`)注解的 bean，注解默认会扫描该类所在的包下所有的类。
 - `@SpringBootConfiguration`：允许在 Spring 上下文中注册额外的 bean 或导入其他配置类
 
-其中`@EnableAutoConfiguration`注解是实现自动配置的核心注解。该注解**通过`@Import`注解导入对应的配置选择器**，内部其实就是读取了该项目和该项目引用下的jar包的classpath路径下**META-INF/spring.factories**文件中**所有配置类的全类名**。
+其中`@EnableAutoConfiguration`注解是实现自动配置的核心注解。该注解**通过`@Import`注解导入对应的配置选择器**，关键的是内部读取了该项目和该项目引用的jar包的classpath路径下**META-INF/spring.factories**文件中**所配置的类的全类名**。
 
-在这些配置类中所定义的Bean会**根据条件注解所指定的条件**来决定是否要将其导入到Spring容器中。
+这些配置类中所定义的Bean会**根据条件注解所指定的条件**来决定是否要将其导入到Spring容器中。
 
 比如`@ConditionalOnClass`注解，判断是否有对应的class文件，如果有则加载该类，把这个配置类的所有Bean放入到Spring中使用。
 
