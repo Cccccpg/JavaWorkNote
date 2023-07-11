@@ -231,9 +231,11 @@ static class Segment<K,V> extends ReentrantLock implements Serializable {
 一个 ConcurrentHashMap 里包含一个 Segment 数组，Segment 的个数一旦**初始化就不能改变**。 Segment 数组的大小默认是 16，也就是说默认可以同时支持 16 个线程并发写。
 Segment 的结构和 HashMap 类似，是一种数组和链表结构，一个 Segment 包含一个 HashEntry 数组，每个 HashEntry 是一个链表结构的元素，每个 Segment 守护着一个 HashEntry 数组里的元素，当对 HashEntry 数组的数据进行修改时，必须首先获得对应的 Segment 的锁。
 也就是说，对同一 Segment 的并发写入会被阻塞，不同 Segment 的写入是可以并发执行的。
+
 ## 13.2 JDK1.8之后
 ConcurrentHashMap 取消了 Segment 分段锁，采用 Node + CAS + synchronized 来保证并发安全。数据结构跟 HashMap 1.8 的结构类似，数组+链表/红黑二叉树。Java 8 在链表长度超过一定阈值（8）时将链表（寻址时间复杂度为 O(N)）转换为红黑树（寻址时间复杂度为 O(log(N))）。
 Java 8 中，锁粒度更细，synchronized 只锁定当前链表或红黑二叉树的首节点，这样只要 hash 不冲突，就不会产生并发，就不会影响其他 Node 的读写，效率大幅提升。
+
 ## 13.3 总结
 
 - **线程安全实现方式** ：JDK 1.7 采用 Segment 分段锁来保证安全， Segment 是继承自 ReentrantLock。JDK1.8 放弃了 Segment 分段锁的设计，采用 Node + CAS + synchronized 保证线程安全，锁粒度更细，synchronized 只锁定当前链表或红黑二叉树的首节点。
@@ -254,5 +256,14 @@ Java 8 中，锁粒度更细，synchronized 只锁定当前链表或红黑二叉
 
 在1.8中，插入链表的方法更改为尾插法，保持了与扩容前一样的顺序，就避免了出现死循环问题。
 
+# 15、HashMap和HashTable的区别
 
+- **线程是否安全**：HashMap线程不安全，HashTable线程安全；
+- **效率**：因为HashTable是线程安全的，内部的方法基本都经过`synchronized` 修饰，所以其效率是不如HashMap的；
+- **是否支持null的key**：HashMap支持存null的key和value，但是只支持一个null的key，而HashTable不允许有null的key和value；
+- **底层数据结构不同**：HashMap是数组+链表/红黑树，而HashTable是数组+链表；
+- **默认初始容量和扩容大小不同**：HashMap数组的默认初始容量是16，每次扩容为2n，而HashTable默认初始容量大小为11，扩容为2n+1。
 
+# 16、HashMap和TreeMap的区别
+
+TreeMap比HashMap多了对集合中的元素根据键排序的能力，以及对集合内元素的搜索能力。
