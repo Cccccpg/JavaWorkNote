@@ -668,13 +668,24 @@ ParNew 收集器其实就是 Serial 收集器的**多线程版本**，除了使�
 
 **新生代采用标记-复制算法，老年代采用标记-整理算法。**
 
+老年代GC采用的是串行方式收集。
+
 ![ParNew 收集器 ](https://oss.javaguide.cn/github/javaguide/java/jvm/parnew-garbage-collector.png)
 
-### 3.4.3 Parallel Scavenge收集器
+### 3.4.3 Parallel  Scavenge收集器
 
-Parallel Scavenge 收集器关注点是**吞吐量**（高效率的利用 CPU）。CMS 等垃圾收集器的关注点更多的是用户线程的停顿时间（提高用户体验）。所谓吞吐量就是 CPU 中用于运行用户代码的时间与 CPU 总消耗时间的比值。
+Parallel Scavenge 收集器关注点是**吞吐量**（高效率的利用 CPU）。CMS 等垃圾收集器的关注点更多的是**用户线程的停顿时间**（提高用户体验）。所谓吞吐量就是 CPU 中用于运行用户代码的时间与 CPU 总消耗时间的比值。
 
 **新生代采用标记-复制算法，老年代采用标记-整理算法。**
+
+可以设置老年代的收集方式：
+
+```sh
+-XX:+UseParallelGC
+    使用 Parallel 收集器+ 老年代串行
+-XX:+UseParallelOldGC
+    使用 Parallel 收集器+ 老年代并行
+```
 
 **这是 JDK1.8 默认收集器**
 
@@ -684,15 +695,21 @@ Parallel Scavenge 收集器关注点是**吞吐量**（高效率的利用 CPU）
 
 **Serial 收集器的老年代版本**，它同样是一个单线程收集器。
 
+![Serial 收集器](https://oss.javaguide.cn/github/javaguide/java/jvm/serial-garbage-collector.png)
+
 它主要有两大用途：一种用途是在 JDK1.5 以及以前的版本中与 Parallel Scavenge 收集器搭配使用，另一种用途是作为 CMS 收集器的后备方案。
 
 ### 3.4.5 Parallel Old收集器
 
-**Parallel Scavenge 收集器的老年代版本**。使用多线程和“标记-整理”算法。在注重**吞吐量**以及 **CPU 资源**的场合，都可以优先考虑 Parallel Scavenge 收集器和 Parallel Old 收集器。
+**Parallel Scavenge 收集器的老年代版本**。使用多线程和“标记-整理”算法。
+
+在注重**吞吐量**以及 **CPU 资源**的场合，都可以优先考虑 Parallel Scavenge 收集器和 Parallel Old 收集器。
+
+![Parallel Old收集器运行示意图](https://oss.javaguide.cn/github/javaguide/java/jvm/parallel-scavenge-garbage-collector.png)
 
 ### 3.4.6 CMS收集器
 
-CMS（Concurrent Mark Sweep）收集器是一种以获取最**短回收停顿时间**为目标的收集器。它非常符合在注重**用户体验**的应用上使用。
+CMS（Concurrent Mark Sweep）收集器是一种以获取**最短回收停顿时间**为目标的收集器。它非常符合在注重**用户体验**的应用上使用。
 
 CMS（Concurrent Mark Sweep）收集器是 HotSpot 虚拟机第一款真正意义上的**并发收集器**，它第一次实现了让**垃圾收集线程**与用户线程（基本上）**同时工作**。
 

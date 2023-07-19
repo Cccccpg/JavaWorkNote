@@ -570,7 +570,7 @@ NIO属于**同步非阻塞IO模型**，  在 Java 1.4 中就引入了 NIO 的概
 相比于**同步阻塞 IO 模型**，同步非阻塞 IO 模型确实有了很大改进。通过轮询操作，避免了一直阻塞。但是，这种 IO 模型同样存在问题：应用程序不断进行 I/O 系统调用轮询数据是否已经准备好的过程是**十分消耗 CPU 资源的**。
 ![](https://cdn.nlark.com/yuque/0/2021/png/1283027/1629204717413-32393d5c-5ad4-4691-b9ca-7c6363952e72.png#averageHue=%23f9f3ef&from=url&id=O71LR&originHeight=510&originWidth=893&originalType=binary&ratio=1&rotation=0&showTitle=false&status=done&style=none&title=)
 ## 11.3 IO多路复用
-**IO 多路复用模型**是通过一种机制，让一个进程可以**监视**多个文件描述符（套接字描述符）一旦某个文件描述符就绪（一般是读就绪或者写就绪），能够通知程序进行相应的读写操作，这样就不需要每个用户进程不断的询问内核数据准备好了没。**通过减少无效的系统调用，减少了对 CPU 资源的消耗。**常用的 IO 多路复用方式有 `select`、`poll` 和 `epoll ` 。
+**IO 多路复用模型**是通过一种机制，让一个进程可以**监视**多个Socket（套接字描述符）一旦某个Socket就绪（一般是读就绪或者写就绪），能够通知程序进行相应的读写操作，这样就不需要每个用户进程不断的询问内核数据准备好了没。**通过减少无效的系统调用，减少了对 CPU 资源的消耗。**常用的 IO 多路复用方式有 `select`、`poll` 和 `epoll ` 。
 ![](https://cdn.nlark.com/yuque/0/2021/png/1283027/1629205042586-b34f7478-47b6-4403-8a28-7e3e324a6b00.png#averageHue=%23faf5f2&from=url&id=sihK4&originHeight=540&originWidth=908&originalType=binary&ratio=1&rotation=0&showTitle=false&status=done&style=none&title=)
 IO 多路复用模型中，
 
