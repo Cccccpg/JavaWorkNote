@@ -36,7 +36,7 @@ Java 是一个面向对象的语言，而基本类型不具备面向对象的特
 ---
 
 ## 1.2 常量池缓存技术
-在 Java 中基本类型的包装类的大部分都实现了常量池技术。比如： Byte,Short,Integer,Long 这 4 种包装类默认创建了数值 [-128，127] 的相 应类型的缓存数据，Character 创建了数值在[0,127]范围的缓存数据， Boolean 直接返回 True Or False 。两种浮点数类型的包装类  Float，Double没有实现常量池技术。
+在 Java 中基本类型的包装类的大部分都实现了常量池技术。比如： Byte,Short,Integer,Long 这 4 种包装类默认创建了数值 [-128，127] 的相应类型的缓存数据，Character 创建了数值在[0,127]范围的缓存数据， Boolean 直接返回 True Or False 。两种浮点数类型的包装类 Float，Double没有实现常量池技术。
 ```java
 public static void main(String[] args) {
     Integer e = 1;                  // 整型变量，存储在栈中
@@ -61,6 +61,7 @@ public static void main(String[] args) {
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679457297213-2049d156-d8cd-423c-964e-f7147320d99e.png#averageHue=%232c2c2c&clientId=u5dde27fc-2899-4&from=paste&height=162&id=u558bbd8b&name=image.png&originHeight=162&originWidth=296&originalType=binary&ratio=1&rotation=0&showTitle=false&size=4820&status=done&style=none&taskId=ue5720ea5-a118-43f1-8ecb-bdb00652b39&title=&width=296)
 **包装类里面引入缓存技术的好处是什么？**
 有助于节省内存，提高性能
+
 ## 1.3 String(不是基本数据类型)
  在 Java 8 中，String 内部使用 char 数组存储数据。并且被声明为 final，因此它不可被继承。  
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679466446387-76f0b949-3f0b-44e2-a611-512bce261ac4.png#averageHue=%23312c2b&clientId=u5dde27fc-2899-4&from=paste&height=116&id=uc80783b0&name=image.png&originHeight=116&originWidth=728&originalType=binary&ratio=1&rotation=0&showTitle=false&size=18365&status=done&style=none&taskId=uc18aad2d-941b-46cd-9605-dfea9e995c9&title=&width=728)
@@ -74,6 +75,7 @@ public static void main(String[] args) {
 String在创建对象后，会在**字符串常量池**中进行缓存，如果下次创建同样的对象时，会直接返回缓存的引用。
 3**、线程安全**
 String的不可变性天生具备线程安全的特性，可以在多个线程中安全地使用。
+
 ### 1.3.2 什么是字符串常量池
  字符串常量池位于**方法区**中，专门用来存储字符串常量，可以提高内存的使用率，避免开辟多块空间存储相同的字符串。**在创建字符串时 JVM 会首先检查字符串常量池，如果该字符串已经存在池中，则返回它的引用；如果不存在， 则实例化一个字符串放到池中，并返回其引用。**  
 Q：`String str = new String("A"+"B");`会创建多少对象？
@@ -361,7 +363,7 @@ class Child extends Father{ //继承
 
 ## 6.2 接口应用场景
 
-- 类与类之前需要特定的接口进行协调，而不在乎其如何实现。
+- 类与类之间需要特定的接口进行协调，而不在乎其如何实现。
 - 作为能够实现特定功能的标识存在，也可以是什么接口方法都没有的纯粹标识。
 - 需要将一组类视为单一的类，而调用者只通过接口来与这组类发生联系。
 - 需要实现特定的多项功能，而这些功能之间可能完全没有任何联系。  
@@ -495,6 +497,7 @@ public class Demo {
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679553851940-4b13da2a-f053-4daf-9905-1d2bae657321.png#averageHue=%23302c2b&clientId=u1d8470d1-5a2b-4&from=paste&height=552&id=uad402c65&name=image.png&originHeight=552&originWidth=504&originalType=binary&ratio=1&rotation=0&showTitle=false&size=49948&status=done&style=none&taskId=u810c1e2f-e604-4f74-a2e0-866b105097d&title=&width=504)
 equals 方法会依次比较**引用地址、对象类型、值的内容**是否相同，都相同才会返回true。所以`equals`方法比`==`比较的范围更大、内容更多。
 用`==`判断为true的两个值，用`equals`判断不一定为true。
+
 ```java
 Integer a = 100;
 Integer b = 100;
@@ -521,6 +524,7 @@ hashCode 方法返回对象的散列码，返回值是 int 类型的散列码。
 ## 8.3 为什么重写equals方法后，hashCode方法也要重写？
 以 `HashSet` 为例，`HashSet` 的特点是存储元素时**无序**且**唯一**，在向 `HashSet` 中添加对象时，首先会计算对象的 `HashCode` 值来确定对象的存储位置，如果该位置没有其他对象，直接将该对象添加到该位置；如果该存储位置有存储其他对象（此时新添加的对象和该存储位置的对象的HashCode值相同），则会调用 `equals` 方法判断两 个对象是否相同，如果相同，则添加对象失败，如果不相同，则会将该对象重新散列到其他位置。
 **所以重写 equals 方法后，hashCode 方法不重写的话，会导致所有对象的 HashCode 值都不相同，都能添加成功，那么 HashSet 中会出现很多重复元素。 **
+
 # 9、Java中只存在值传递
 ```java
 public class Demo {

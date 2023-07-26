@@ -103,6 +103,11 @@ public boolean add(E e) {
 ## 7.2 JDK 1.8之后  
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679887361430-2c8688f6-ec3a-43dd-b33e-cf971e94b21b.png#averageHue=%23f0eeed&clientId=u490ccfef-0f43-4&from=paste&height=365&id=u9a462031&name=image.png&originHeight=401&originWidth=533&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=18055&status=done&style=none&taskId=u56e2021c-37b0-4666-993c-0323e5ac772&title=&width=484.5454440432149)
 JDK1.8 之后底层采用的是**数组+（链表和红黑树）**，主要不同在于解决hash冲突时，当链表长度超过设定的阈值长度时（默认为 8）,会先判断数组的长度是否小于 64(初始最大容量)，如果小于的话，并不是直接转为红黑树，而是进行扩容，只有当数组长度大于 64 时，才会将对应的链表转换为红黑树。
+
+### 7.2.1 为什么HashMap的底层要用红黑树，而不是平衡树呢？
+
+因为HashMap中需要频繁的新增或删除数据，一旦树中节点需要改变，那必然导致树的结构需要调整。而红黑树不像平衡树那样追求“完全平衡”，红黑树只需要部分达到平衡即可，所以其增删节点时旋转的次数会比平衡树降低很多，这也就意味着红黑树的调整效率比平衡树高很多，同样也更好设计和实现。
+
 ## 7.3 put的具体过程
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28551010/1679886355833-289e85ef-537a-4f3f-a7a9-f37843d33188.png#averageHue=%23f7f6f4&clientId=u490ccfef-0f43-4&from=paste&height=565&id=u62afd134&name=image.png&originHeight=622&originWidth=1116&originalType=binary&ratio=1.100000023841858&rotation=0&showTitle=false&size=47834&status=done&style=none&taskId=u21ecf30e-b3fb-4267-baa3-f17664ff7de&title=&width=1014.5454325557745)
 
@@ -116,7 +121,9 @@ JDK1.8 之后底层采用的是**数组+（链表和红黑树）**，主要不�
 
 ## 7.4 为什么负载因子是0.75？
 
-loadFactor 太大导致查找元素效率低，存放的数据拥挤，太小导致数组的利用率低，存放的数据会很分散。loadFactor 的默认值为 **0.75f 是官方给出的一个比较好的临界值，可以保证查询性能和空间利用效率之间取得平衡**。
+loadFactor 太大导致查找元素效率低，存放的数据拥挤，hash冲突概率大大提升；太小会导致数组的利用率低，存放的数据会很分散。
+
+loadFactor 的默认值为 **0.75f 是官方给出的一个比较好的临界值，可以保证查询性能和空间利用效率之间取得平衡**。
 
 ## 7.5 讲一讲HashMap的扩容机制
 
